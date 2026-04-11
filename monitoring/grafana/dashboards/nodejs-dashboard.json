@@ -1,0 +1,42 @@
+{
+  "dashboard": {
+    "title": "MongoDB Performance Dashboard",
+    "panels": [
+      {
+        "title": "Operations per Second",
+        "targets": [
+          {
+            "expr": "rate(mongodb_op_counters_total{type='insert'}[5m])",
+            "legendFormat": "Insert"
+          },
+          {
+            "expr": "rate(mongodb_op_counters_total{type='query'}[5m])",
+            "legendFormat": "Query"
+          },
+          {
+            "expr": "rate(mongodb_op_counters_total{type='update'}[5m])",
+            "legendFormat": "Update"
+          }
+        ]
+      },
+      {
+        "title": "Connection Count",
+        "targets": [
+          {
+            "expr": "mongodb_connections{state='current'}",
+            "legendFormat": "Current Connections"
+          }
+        ]
+      },
+      {
+        "title": "Memory Usage",
+        "targets": [
+          {
+            "expr": "mongodb_memory{type='resident'}",
+            "legendFormat": "Resident Memory"
+          }
+        ]
+      }
+    ]
+  }
+}

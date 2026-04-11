@@ -1,0 +1,38 @@
+// Production pipeline - Requires approval
+pipeline {
+    agent any
+    environment {
+        DEPLOY_ENV = 'production'
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'make build'
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                sh 'docker scan backend:prod'
+                sh 'docker scan frontend:prod'
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    input message: 'Deploy to PRODUCTION?', 
+                          ok: 'Deploy',
+                          parameters: [
+                              string(defaultValue: '', description: 'Approver Name', name: 'APPROVER'),
+                              string(defaultValue: '', description: 'JIRA Ticket', name: 'JIRA_TICKET')
+                          ]
+                }
+                sh 'make deploy-prod'
+            }
+        }
+        stage('Post-Deployment Tests') {
+            steps {
+                sh 'make test'
+            }
+        }
+    }
+}

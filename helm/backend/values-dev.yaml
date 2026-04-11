@@ -1,0 +1,56 @@
+# Development environment overrides
+environment: dev
+replicaCount: 1
+
+image:
+  repository: your-registry.io/ecommerce/backend
+  tag: dev-latest
+  pullPolicy: Always
+
+# Development MongoDB (ephemeral)
+mongodb:
+  enabled: true
+  architecture: standalone
+  persistence:
+    enabled: false  # No persistence for dev
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  backup:
+    enabled: false
+
+config:
+  logLevel: debug
+  corsOrigin: "*"
+  rateLimit:
+    windowMs: 60000  # 1 minute
+    max: 1000  # Higher limit for dev
+
+resources:
+  requests:
+    memory: 256Mi
+    cpu: 250m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+
+ingress:
+  enabled: true
+  hosts:
+    - host: dev-api.ecommerce.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+monitoring:
+  enabled: false
+
+readinessProbe:
+  initialDelaySeconds: 5
+
+livenessProbe:
+  initialDelaySeconds: 15

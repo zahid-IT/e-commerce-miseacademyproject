@@ -1,0 +1,19 @@
+pipeline {
+    agent any
+    environment {
+        DEPLOY_ENV = 'dev'
+        AUTO_DEPLOY = 'true'
+    }
+    stages {
+        stage('Build & Test') {
+            steps {
+                sh 'make test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'make deploy-dev'
+            }
+        }
+    }
+}

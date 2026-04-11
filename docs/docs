@@ -1,0 +1,13 @@
+# Deployment Guide
+
+## Prerequisites
+- Kubernetes cluster (1.20+)
+- Helm 3.x
+- kubectl configured
+- Container registry access
+
+## Environment Setup
+
+### Development
+```bash
+make deploy-dev

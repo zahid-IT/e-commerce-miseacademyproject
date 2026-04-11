@@ -1,0 +1,58 @@
+{{- if .Values.mongodb.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "backend.fullname" . }}-mongodb-backup
+spec:
+  schedule: {{ .Values.mongodb.backup.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup
+            image: mongo:5.0
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Get MongoDB URI
+              MONGO_URI=$(cat /var/run/secrets/mongodb-uri)
+              
+              # Create backup
+              FILENAME="backup-$(date +%Y%m%d-%H%M%S).gz"
+              mongodump --uri="$MONGO_URI" --archive=/backup/$FILENAME --gzip
+              
+              # Upload to S3 (if configured)
+              {{- if .Values.mongodb.backup.s3 }}
+              aws s3 cp /backup/$FILENAME s3://{{ .Values.mongodb.backup.s3.bucket }}/mongodb/
+              {{- end }}
+              
+              # Clean old backups (keep last 7 days)
+              find /backup -name "*.gz" -mtime +7 -delete
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+            env:
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "backend.fullname" . }}-mongodb-secret
+                  key: mongodb-uri
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: {{ include "backend.fullname" . }}-backup-pvc
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "backend.fullname" . }}-backup-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+{{- end }}

@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-exporter
+  namespace: monitoring
+  labels:
+    app: mongodb-exporter
+spec:
+  ports:
+  - name: metrics
+    port: 9216
+    targetPort: 9216
+  selector:
+    app.kubernetes.io/name: mongodb
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mongodb-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mongodb
+  endpoints:
+  - port: metrics
+    interval: 30s

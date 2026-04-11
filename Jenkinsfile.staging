@@ -1,0 +1,30 @@
+// Staging pipeline - Manual trigger after dev validation
+pipeline {
+    agent any
+    environment {
+        DEPLOY_ENV = 'staging'
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'make build'
+            }
+        }
+        stage('Push') {
+            steps {
+                sh 'make push'
+            }
+        }
+        stage('Deploy to Staging') {
+            steps {
+                input message: 'Deploy to staging?', ok: 'Deploy'
+                sh 'make deploy-staging'
+            }
+        }
+        stage('Smoke Tests') {
+            steps {
+                sh 'make test'
+            }
+        }
+    }
+}

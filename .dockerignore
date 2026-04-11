@@ -1,0 +1,16 @@
+.git
+.gitignore
+README.md
+node_modules
+npm-debug.log
+.DS_Store
+*.md
+!.github
+.idea
+.vscode
+coverage
+.env
+.env.*
+*.log
+docker-compose*.yml
+helm/**/charts/*.tgz

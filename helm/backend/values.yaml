@@ -1,0 +1,201 @@
+# Default values for backend
+# This is a YAML-formatted file.
+
+# Number of replicas
+replicaCount: 1
+
+# Image configuration
+image:
+  repository: your-registry.io/ecommerce/backend
+  tag: latest
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+
+# Image pull secrets
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext: {}
+  # fsGroup: 2000
+
+# Container security context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+# Resource limits
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# MongoDB configuration
+mongodb:
+  enabled: true
+  architecture: standalone  # standalone or replicaset
+  
+  auth:
+    enabled: true
+    rootPassword: "root-password"
+    database: ecommerce
+    username: ecommerce_user
+    password: "ecommerce-password"
+  
+  external:
+    enabled: false
+    uri: ""
+  
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  
+  backup:
+    enabled: false
+    schedule: "0 2 * * *"
+    retention: 7
+
+# Application configuration
+config:
+  port: 3000
+  logLevel: info
+  environment: production
+  
+  # JWT configuration
+  jwtSecret: ""  # Will be auto-generated if not provided
+  existingJwtSecret: ""
+  jwtExpiresIn: "7d"
+  
+  # CORS
+  corsOrigin: "*"
+  
+  # Rate limiting
+  rateLimit:
+    windowMs: 900000  # 15 minutes
+    max: 100
+
+# Environment variables
+extraEnv: []
+# - name: SOME_VAR
+#   value: "some value"
+
+# Volumes
+extraVolumes: []
+extraVolumeMounts: []
+
+# Init containers
+initContainers: []
+# - name: init-db
+#   image: busybox
+#   command: ['sh', '-c', 'echo "Initializing..."']
+
+# Lifecycle hooks
+lifecycle: {}
+#   postStart:
+#     exec:
+#       command: ["/bin/sh", "-c", "echo Hello"]
+
+# Readiness probe
+readinessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+# Liveness probe
+livenessProbe:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+  successThreshold: 1
+
+# Startup probe (for slow starting apps)
+startupProbe:
+  enabled: false
+
+# Prometheus monitoring
+monitoring:
+  enabled: false
+  serviceMonitor:
+    interval: 30s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: false
+    rules: []

@@ -1,0 +1,74 @@
+# Staging environment overrides
+environment: staging
+replicaCount: 2
+
+image:
+  repository: your-registry.io/ecommerce/backend
+  tag: staging-latest
+  pullPolicy: Always
+
+# Staging MongoDB (with persistence)
+mongodb:
+  enabled: true
+  architecture: replicaset  # Replica set for staging
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: "fast-ssd"
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+  backup:
+    enabled: true
+    schedule: "0 2 * * *"
+
+config:
+  logLevel: info
+  corsOrigin: "https://staging.ecommerce.com"
+  rateLimit:
+    windowMs: 900000  # 15 minutes
+    max: 200
+
+resources:
+  requests:
+    memory: 512Mi
+    cpu: 500m
+  limits:
+    memory: 1Gi
+    cpu: 1000m
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  hosts:
+    - host: staging-api.ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: staging-api-tls
+      hosts:
+        - staging-api.ecommerce.com
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    interval: 30s
+
+readinessProbe:
+  initialDelaySeconds: 10
+
+livenessProbe:
+  initialDelaySeconds: 30

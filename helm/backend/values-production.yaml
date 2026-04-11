@@ -1,0 +1,112 @@
+# Production environment overrides
+environment: production
+replicaCount: 3
+
+image:
+  repository: your-registry.io/ecommerce/backend
+  tag: prod-latest
+  pullPolicy: IfNotPresent
+
+# Production uses external MongoDB (Atlas or managed)
+mongodb:
+  enabled: false
+  external:
+    enabled: true
+    uri: ""  # Will be set via secret
+  backup:
+    enabled: true
+    schedule: "0 */6 * * *"
+    retention: 30
+    s3:
+      bucket: "ecommerce-prod-backups"
+
+config:
+  logLevel: error
+  corsOrigin: "https://ecommerce.com"
+  jwtExpiresIn: "24h"
+  rateLimit:
+    windowMs: 900000  # 15 minutes
+    max: 100  # Lower limit for production
+
+resources:
+  requests:
+    memory: 1Gi
+    cpu: 1000m
+  limits:
+    memory: 2Gi
+    cpu: 2000m
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "10"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "20"
+  hosts:
+    - host: api.ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-ecommerce-tls
+      hosts:
+        - api.ecommerce.com
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    interval: 15s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: BackendHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on backend"
+
+# Production-specific affinity rules
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: backend
+      topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+
+# Node selector for production nodes
+nodeSelector:
+  node-type: production
+
+# Security context for production
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001

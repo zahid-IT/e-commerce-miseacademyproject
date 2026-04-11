@@ -1,0 +1,9 @@
+piVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "frontend.fullname" . }}-config
+  labels:
+    {{- include "frontend.labels" . | nindent 4 }}
+data:
+  REACT_APP_API_URL: {{ .Values.config.apiUrl | quote }}
+  REACT_APP_ENVIRONMENT: {{ .Values.config.environment | quote }}

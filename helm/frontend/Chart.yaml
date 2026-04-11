@@ -1,0 +1,21 @@
+apiVersion: v2
+name: frontend
+description: E-commerce Frontend React Application
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - ecommerce
+  - frontend
+  - react
+  - tailwind
+
+maintainers:
+  - name: Zahid Bilal
+    email: zahid@example.com
+
+home: https://github.com/zahid-IT/ecommerce-miseacademyproject
+
+sources:
+  - https://github.com/zahid-IT/ecommerce-miseacademyproject
