@@ -1,3 +1,4 @@
+#cat > helm/backend/values-staging.yaml << 'EOF'
 # Staging environment overrides
 environment: staging
 replicaCount: 2
@@ -7,14 +8,42 @@ image:
   tag: staging-latest
   pullPolicy: Always
 
-# Staging MongoDB (with persistence)
+# ============================================
+# JWT & APPLICATION CONFIGURATION
+# ============================================
+config:
+  logLevel: info
+  corsOrigin: "https://staging.ecommerce.com"
+  
+  # ⭐ JWT SECRETS FOR STAGING
+  jwtSecret: "staging_jwt_9yL0#nQ3$wM6&oR9@sU2!xF5^zI8*aP4(2024"
+  jwtRefreshSecret: "staging_refresh_8g4f9d3h6j2k5l8n1p4r7t0w3y6u9x2c2024"
+  jwtExpiresIn: "7d"
+  
+  rateLimit:
+    windowMs: 900000  # 15 minutes
+    max: 200
+
+# ============================================
+# MONGODB CONFIGURATION WITH AUTHENTICATION
+# ============================================
 mongodb:
   enabled: true
   architecture: replicaset  # Replica set for staging
+  
+  # ⭐ MONGODB AUTHENTICATION - Add these
+  auth:
+    enabled: true
+    rootPassword: "staging_root_AbC456!@#XyZ123$%^DeF789"
+    username: "ecommerce_staging_user"
+    password: "staging_user_S3cure@2024!@#$%"
+    database: "ecommerce_staging"
+  
   persistence:
     enabled: true
     size: 50Gi
     storageClass: "fast-ssd"
+  
   resources:
     requests:
       memory: 512Mi
@@ -22,17 +51,23 @@ mongodb:
     limits:
       memory: 1Gi
       cpu: 1000m
+  
   backup:
     enabled: true
     schedule: "0 2 * * *"
+    retention: 7
 
-config:
-  logLevel: info
-  corsOrigin: "https://staging.ecommerce.com"
-  rateLimit:
-    windowMs: 900000  # 15 minutes
-    max: 200
+# ============================================
+# FEATURE FLAGS (Optional)
+# ============================================
+features:
+  paymentsEnabled: true
+  reviewsEnabled: true
+  wishlistEnabled: true
 
+# ============================================
+# RESOURCE LIMITS
+# ============================================
 resources:
   requests:
     memory: 512Mi
@@ -41,17 +76,24 @@ resources:
     memory: 1Gi
     cpu: 1000m
 
+# ============================================
+# AUTOSCALING
+# ============================================
 autoscaling:
   enabled: true
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 70
 
+# ============================================
+# INGRESS CONFIGURATION
+# ============================================
 ingress:
   enabled: true
   className: "nginx"
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   hosts:
     - host: staging-api.ecommerce.com
       paths:
@@ -62,13 +104,60 @@ ingress:
       hosts:
         - staging-api.ecommerce.com
 
+# ============================================
+# MONITORING
+# ============================================
 monitoring:
   enabled: true
   serviceMonitor:
     interval: 30s
+    scrapeTimeout: 10s
 
+# ============================================
+# PROBES
+# ============================================
 readinessProbe:
   initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
 
 livenessProbe:
   initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+# ============================================
+# STAGING-SPECIFIC AFFINITY
+# ============================================
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: backend
+        topologyKey: kubernetes.io/hostname
+
+# ============================================
+# NODE SELECTOR (Optional)
+# ============================================
+nodeSelector: {}
+
+# ============================================
+# SECURITY CONTEXT
+# ============================================
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false  # Staging can be less strict
+  runAsNonRoot: true
+  runAsUser: 1001

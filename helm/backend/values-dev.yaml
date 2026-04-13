@@ -1,4 +1,3 @@
-# Development environment overrides
 environment: dev
 replicaCount: 1
 
@@ -7,12 +6,43 @@ image:
   tag: dev-latest
   pullPolicy: Always
 
-# Development MongoDB (ephemeral)
+# ============================================
+# JWT & APPLICATION CONFIGURATION
+# ============================================
+config:
+  logLevel: debug
+  corsOrigin: "*"
+  
+  # ⭐ JWT SECRETS - Add these
+  jwtSecret: "dev_jwt_8xK9#mP2$vL5&nQ8@rT1!wE4^yU7*iO3(2024"
+  jwtRefreshSecret: "dev_refresh_7f3e8a2c9b1d4f6h8j0k2l4n6p8r0t2v2024"
+  jwtExpiresIn: "7d"
+  
+  rateLimit:
+    windowMs: 60000  # 1 minute
+    max: 1000  # Higher limit for dev
+
+# ============================================
+# MONGODB CONFIGURATION WITH CREDENTIALS
+# ============================================
 mongodb:
   enabled: true
   architecture: standalone
   persistence:
     enabled: false  # No persistence for dev
+  
+  # ⭐ MONGODB AUTHENTICATION - Add these
+  auth:
+    enabled: true
+    rootPassword: "dev_root_XyZ789!@#AbC123$%^DeF456"
+    username: "ecommerce_dev_user"
+    password: "dev_user_P@ssw0rd2024!@#$"
+    database: "ecommerce_dev"
+  
+  external:
+    enabled: false
+    uri: ""
+  
   resources:
     requests:
       memory: 256Mi
@@ -20,16 +50,21 @@ mongodb:
     limits:
       memory: 512Mi
       cpu: 500m
+  
   backup:
     enabled: false
 
-config:
-  logLevel: debug
-  corsOrigin: "*"
-  rateLimit:
-    windowMs: 60000  # 1 minute
-    max: 1000  # Higher limit for dev
+# ============================================
+# FEATURE FLAGS (Optional)
+# ============================================
+features:
+  paymentsEnabled: false
+  reviewsEnabled: true
+  wishlistEnabled: true
 
+# ============================================
+# RESOURCE LIMITS
+# ============================================
 resources:
   requests:
     memory: 256Mi
@@ -38,6 +73,9 @@ resources:
     memory: 512Mi
     cpu: 500m
 
+# ============================================
+# INGRESS CONFIGURATION
+# ============================================
 ingress:
   enabled: true
   hosts:
@@ -46,9 +84,15 @@ ingress:
         - path: /
           pathType: Prefix
 
+# ============================================
+# MONITORING
+# ============================================
 monitoring:
   enabled: false
 
+# ============================================
+# PROBES
+# ============================================
 readinessProbe:
   initialDelaySeconds: 5
 
