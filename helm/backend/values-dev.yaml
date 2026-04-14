@@ -2,7 +2,7 @@ environment: dev
 replicaCount: 1
 
 image:
-  repository: your-registry.io/ecommerce/backend
+  repository: zahidbilal/e-commerce-miseacademyproject-backend
   tag: dev-latest
   pullPolicy: Always
 
