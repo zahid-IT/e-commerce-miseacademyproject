@@ -1,57 +1,18 @@
-#cat > helm/backend/values-production.yaml << 'EOF'
-# Production environment overrides
 environment: production
-replicaCount: 1
+replicaCount: 3
 
-image:
-  repository: your-registry.io/ecommerce/backend
-  tag: prod-latest
-  pullPolicy: IfNotPresent
-
-# ============================================
-# JWT CONFIGURATION FOR PRODUCTION
-# ============================================
+# Production uses external secrets (not stored in values)
 config:
+  jwtSecret: ""  # Will be set via external secret
   logLevel: error
-  corsOrigin: "https://ecommerce.com"
-  jwtExpiresIn: "24h"
-  
-  # ⭐ IMPORTANT: For production, JWT secret is NOT stored here
-  # It will be provided via Kubernetes secret or external secrets manager
-  # Leave this empty - it will be set by the secret
-  jwtSecret: ""
-  existingJwtSecret: "ecommerce-backend-jwt-secret"  # Reference to existing secret
-  
-  rateLimit:
-    windowMs: 900000  # 15 minutes
-    max: 100  # Lower limit for production
 
-# ============================================
-# MONGODB CONFIGURATION (External - Atlas)
-# ============================================
+# Use external MongoDB (Atlas)
 mongodb:
   enabled: false
   external:
     enabled: true
-    uri: ""  # Will be set via Kubernetes secret
-  
-  auth:
-    enabled: true
-    username: "ecommerce_prod_user"
-    database: "ecommerce_production"
-    # Passwords will come from secret
-  
-  backup:
-    enabled: true
-    schedule: "0 */6 * * *"
-    retention: 30
-    s3:
-      bucket: "ecommerce-prod-backups"
-      region: "us-east-1"
+    uri: ""  # Will be set via secret
 
-# ============================================
-# RESOURCE LIMITS
-# ============================================
 resources:
   requests:
     memory: 1Gi
@@ -60,100 +21,12 @@ resources:
     memory: 2Gi
     cpu: 2000m
 
-# ============================================
-# AUTOSCALING
-# ============================================
 autoscaling:
   enabled: true
   minReplicas: 3
   maxReplicas: 20
-  targetCPUUtilizationPercentage: 60
-  targetMemoryUtilizationPercentage: 70
 
-# ============================================
-# INGRESS CONFIGURATION
-# ============================================
 ingress:
   enabled: true
-  className: "nginx"
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/rate-limit: "10"
-    nginx.ingress.kubernetes.io/rate-limit-burst: "20"
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
   hosts:
     - host: api.ecommerce.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: api-ecommerce-tls
-      hosts:
-        - api.ecommerce.com
-
-# ============================================
-# MONITORING
-# ============================================
-monitoring:
-  enabled: true
-  serviceMonitor:
-    interval: 15s
-    scrapeTimeout: 10s
-  prometheusRule:
-    enabled: true
-    rules:
-      - alert: BackendHighErrorRate
-        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
-        for: 5m
-        labels:
-          severity: critical
-        annotations:
-          summary: "High error rate on backend"
-      - alert: BackendHighLatency
-        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
-        for: 5m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High latency detected"
-
-# ============================================
-# PRODUCTION-SPECIFIC AFFINITY RULES
-# ============================================
-affinity:
-  podAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchLabels:
-          app.kubernetes.io/name: backend
-      topologyKey: kubernetes.io/hostname
-
-topologySpreadConstraints:
-- maxSkew: 1
-  topologyKey: kubernetes.io/hostname
-  whenUnsatisfiable: DoNotSchedule
-  labelSelector:
-    matchLabels:
-      app.kubernetes.io/name: backend
-
-# ============================================
-# NODE SELECTOR
-# ============================================
-nodeSelector:
-  node-type: production
-
-# ============================================
-# SECURITY CONTEXT
-# ============================================
-podSecurityContext:
-  runAsNonRoot: true
-  runAsUser: 1001
-  fsGroup: 2000
-
-securityContext:
-  capabilities:
-    drop:
-    - ALL
-  readOnlyRootFilesystem: true
-  runAsNonRoot: true
-  runAsUser: 1001

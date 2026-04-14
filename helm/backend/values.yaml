@@ -6,7 +6,7 @@ replicaCount: 1
 
 # Image configuration
 image:
-  repository: your-registry.io/ecommerce/backend
+  repository: docker push zahidbilal/e-commerce-miseacademyproject-backend
   tag: latest
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
