@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: your-registry.io/ecommerce/frontend
+  repository: zahidbilal/e-commerce-miseacademyproject-frontend
   tag: latest
   pullPolicy: IfNotPresent
 
