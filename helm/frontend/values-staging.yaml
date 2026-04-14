@@ -1,0 +1,110 @@
+#cat > helm/frontend/values-staging.yaml << 'EOF'
+# Staging environment overrides
+environment: staging
+replicaCount: 2
+
+image:
+  repository: your-registry.io/ecommerce/frontend
+  tag: staging-latest
+  pullPolicy: Always
+
+# Staging configuration
+config:
+  apiUrl: "https://staging-api.ecommerce.com/api"
+  environment: staging
+  enableAnalytics: "true"
+  enableDebugTools: "true"
+
+# Resource limits (medium)
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+# Ingress for staging (real domain)
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: staging-frontend.ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: staging-frontend-tls
+      hosts:
+        - staging-frontend.ecommerce.com
+
+# Autoscaling for staging
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+
+# Service (ClusterIP for internal)
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Monitoring enabled
+monitoring:
+  enabled: true
+  serviceMonitor:
+    interval: 30s
+
+# Probes
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+# Additional environment variables
+extraEnv:
+  - name: REACT_APP_DEBUG
+    value: "false"
+  - name: REACT_APP_LOG_LEVEL
+    value: "info"
+  - name: REACT_APP_SENTRY_ENVIRONMENT
+    value: "staging"
+
+# Affinity for staging
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: frontend
+        topologyKey: kubernetes.io/hostname
+
+# Node selector
+nodeSelector:
+  node-type: staging
+
+# Security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+

@@ -1,0 +1,75 @@
+#cat > helm/frontend/values-dev.yaml << 'EOF'
+# Development environment overrides
+environment: dev
+replicaCount: 1
+
+image:
+  repository: ecommerce-frontend  # Local image for dev
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Development configuration
+config:
+  apiUrl: "http://backend-service:3000/api"
+  environment: development
+  enableAnalytics: "false"
+  enableDebugTools: "true"
+
+# Resource limits (lower for dev)
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Ingress for dev (local domain)
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: dev-frontend.ecommerce.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# No autoscaling for dev
+autoscaling:
+  enabled: false
+
+# Service type (NodePort for local access)
+service:
+  type: NodePort
+  port: 80
+  targetPort: 80
+  nodePort: 30080
+
+# Monitoring disabled for dev
+monitoring:
+  enabled: false
+
+# Probes (shorter for dev)
+livenessProbe:
+  initialDelaySeconds: 15
+  periodSeconds: 10
+
+readinessProbe:
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+# Additional environment variables
+extraEnv:
+  - name: REACT_APP_DEBUG
+    value: "true"
+  - name: REACT_APP_LOG_LEVEL
+    value: "debug"
+
+# Node selector (development nodes)
+nodeSelector:
+  node-type: development
+
+# No affinity for dev
+affinity: {}

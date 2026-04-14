@@ -1,0 +1,154 @@
+#cat > helm/frontend/values-production.yaml << 'EOF'
+# Production environment overrides
+environment: production
+replicaCount: 3
+
+image:
+  repository: your-registry.io/ecommerce/frontend
+  tag: prod-latest
+  pullPolicy: IfNotPresent
+
+# Production configuration
+config:
+  apiUrl: "https://api.ecommerce.com/api"
+  environment: production
+  enableAnalytics: "true"
+  enableDebugTools: "false"
+
+# Resource limits (higher for production)
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Ingress for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-burst: "200"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "8k"
+  hosts:
+    - host: ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: www.ecommerce.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: ecommerce-frontend-tls
+      hosts:
+        - ecommerce.com
+        - www.ecommerce.com
+
+# Autoscaling for production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 70
+
+# Service (ClusterIP)
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+# Monitoring enabled with stricter intervals
+monitoring:
+  enabled: true
+  serviceMonitor:
+    interval: 15s
+    scrapeTimeout: 10s
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: FrontendHighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on frontend"
+      - alert: FrontendHighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on frontend"
+
+# Probes
+livenessProbe:
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Production environment variables
+extraEnv:
+  - name: REACT_APP_DEBUG
+    value: "false"
+  - name: REACT_APP_LOG_LEVEL
+    value: "error"
+  - name: REACT_APP_SENTRY_ENVIRONMENT
+    value: "production"
+  - name: REACT_APP_ENABLE_PWA
+    value: "true"
+
+# Affinity for production (spread across nodes)
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: frontend
+      topologyKey: kubernetes.io/hostname
+
+# Topology spread constraints
+topologySpreadConstraints:
+- maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+
+# Node selector for production nodes
+nodeSelector:
+  node-type: production
+
+# Production security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+
+# Tolerations (if needed)
+tolerations: []
+

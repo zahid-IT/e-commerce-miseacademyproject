@@ -1,3 +1,4 @@
+#cat > helm/frontend/templates/deployment.yaml << 'EOF'
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -5,7 +6,9 @@ metadata:
   labels:
     {{- include "frontend.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "frontend.selectorLabels" . | nindent 6 }}
@@ -13,7 +16,14 @@ spec:
     metadata:
       labels:
         {{- include "frontend.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "{{ .Values.monitoring.enabled }}"
+        prometheus.io/port: "80"
     spec:
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -24,22 +34,54 @@ spec:
         env:
         - name: REACT_APP_API_URL
           value: {{ .Values.config.apiUrl | quote }}
-        - name: NODE_ENV
+        - name: REACT_APP_ENVIRONMENT
           value: {{ .Values.config.environment | quote }}
+        - name: REACT_APP_ENABLE_ANALYTICS
+          value: {{ .Values.config.enableAnalytics | quote }}
+        - name: REACT_APP_ENABLE_DEBUG_TOOLS
+          value: {{ .Values.config.enableDebugTools | quote }}
         {{- with .Values.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
+        {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
-            path: /
+            path: {{ .Values.livenessProbe.path }}
             port: http
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
-            path: /
+            path: {{ .Values.readinessProbe.path }}
             port: http
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

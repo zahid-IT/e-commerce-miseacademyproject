@@ -1,3 +1,4 @@
+#cat > helm/frontend/values.yaml << 'EOF'
 # Default values for frontend
 replicaCount: 1
 
@@ -6,10 +7,14 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 
+nameOverride: ""
+fullnameOverride: ""
+
 service:
   type: ClusterIP
   port: 80
   targetPort: 80
+  annotations: {}
 
 ingress:
   enabled: false
@@ -40,9 +45,38 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
-# Environment variables
+# Environment variables (non-secret)
 config:
-  apiUrl: "http://backend:3000"
+  apiUrl: "http://backend-service:3000/api"
   environment: production
+  enableAnalytics: "false"
+  enableDebugTools: "false"
 
 extraEnv: []
+
+# Monitoring
+monitoring:
+  enabled: false
+  serviceMonitor:
+    interval: 30s
+
+# Security context
+podSecurityContext: {}
+securityContext: {}
+
+# Probes
+livenessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
