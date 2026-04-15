@@ -1,6 +1,17 @@
 environment: staging
 replicaCount: 2
 
+<<<<<<< HEAD
+=======
+image:
+  repository: zahidbilal/e-commerce-miseacademyproject-backend
+  tag: staging-latest
+  pullPolicy: Always
+
+# ============================================
+# JWT & APPLICATION CONFIGURATION
+# ============================================
+>>>>>>> dev
 config:
   jwtSecret: "staging-jwt-key-must-be-different-2024"
   logLevel: info

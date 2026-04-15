@@ -1,7 +1,18 @@
 environment: production
 replicaCount: 3
 
+<<<<<<< HEAD
 # Production uses external secrets (not stored in values)
+=======
+image:
+  repository: zahidbilal/e-commerce-miseacademyproject-backend
+  tag: prod-latest
+  pullPolicy: IfNotPresent
+
+# ============================================
+# JWT CONFIGURATION FOR PRODUCTION
+# ============================================
+>>>>>>> dev
 config:
   jwtSecret: ""  # Will be set via external secret
   logLevel: error
