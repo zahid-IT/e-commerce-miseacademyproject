@@ -1,10 +1,11 @@
+#cat > helm/backend/values-dev.yaml << 'EOF'
 environment: dev
 replicaCount: 1
 
 image:
-  repository: zahidbilal/e-commerce-miseacademyproject-backend
-  tag: dev-latest
-  pullPolicy: Always
+  repository: ecommerce-backend  # Local image name for Minikube
+  tag: latest                     # Use latest tag for local build
+  pullPolicy: IfNotPresent        # Don't pull from registry, use local
 
 # ============================================
 # JWT & APPLICATION CONFIGURATION
@@ -13,14 +14,14 @@ config:
   logLevel: debug
   corsOrigin: "*"
   
-  # ⭐ JWT SECRETS - Add these
+  # ⭐ JWT SECRETS
   jwtSecret: "dev_jwt_8xK9#mP2$vL5&nQ8@rT1!wE4^yU7*iO3(2024"
   jwtRefreshSecret: "dev_refresh_7f3e8a2c9b1d4f6h8j0k2l4n6p8r0t2v2024"
   jwtExpiresIn: "7d"
   
   rateLimit:
-    windowMs: 60000  # 1 minute
-    max: 1000  # Higher limit for dev
+    windowMs: 60000
+    max: 1000
 
 # ============================================
 # MONGODB CONFIGURATION WITH CREDENTIALS
@@ -31,7 +32,6 @@ mongodb:
   persistence:
     enabled: false  # No persistence for dev
   
-  # ⭐ MONGODB AUTHENTICATION - Add these
   auth:
     enabled: true
     rootPassword: "dev_root_XyZ789!@#AbC123$%^DeF456"
@@ -55,7 +55,7 @@ mongodb:
     enabled: false
 
 # ============================================
-# FEATURE FLAGS (Optional)
+# FEATURE FLAGS
 # ============================================
 features:
   paymentsEnabled: false
@@ -74,15 +74,19 @@ resources:
     cpu: 500m
 
 # ============================================
-# INGRESS CONFIGURATION
+# INGRESS CONFIGURATION - DISABLED FOR MINIKUBE
 # ============================================
 ingress:
-  enabled: true
-  hosts:
-    - host: dev-api.ecommerce.local
-      paths:
-        - path: /
-          pathType: Prefix
+  enabled: false  # ← CHANGED: Disable ingress for Minikube
+
+# ============================================
+# SERVICE TYPE - ADD THIS FOR MINIKUBE
+# ============================================
+service:
+  type: NodePort  # ← ADDED: Use NodePort for Minikube access
+  port: 3000
+  targetPort: 3000
+  nodePort: 30080  # Optional: specific port
 
 # ============================================
 # MONITORING
@@ -98,3 +102,4 @@ readinessProbe:
 
 livenessProbe:
   initialDelaySeconds: 15
+
