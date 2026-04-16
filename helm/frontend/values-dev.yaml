@@ -3,7 +3,7 @@ environment: dev
 replicaCount: 1
 
 image:
-  repository: ecommerce-frontend  # Local image name
+  repository: zahidbilal/e-commerce-miseacademyproject-frontend  # Local image name
   tag: latest
   pullPolicy: IfNotPresent
 
