@@ -4,7 +4,7 @@ replicaCount: 2
 <<<<<<< HEAD
 =======
 image:
-  repository: zahidbilal/e-commerce-miseacademyproject-backend
+  repository: zahidbilal/ecommerce-backend
   tag: staging-latest
   pullPolicy: Always
 

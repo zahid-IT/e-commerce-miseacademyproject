@@ -5,7 +5,7 @@ replicaCount: 3
 # Production uses external secrets (not stored in values)
 =======
 image:
-  repository: zahidbilal/e-commerce-miseacademyproject-backend
+  repository: zahidbilal/ecommerce-backend
   tag: prod-latest
   pullPolicy: IfNotPresent
 

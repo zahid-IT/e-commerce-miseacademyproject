@@ -3,7 +3,7 @@ environment: dev
 replicaCount: 1
 
 image:
-  repository: ecommerce-backend  # Local image name for Minikube
+  repository: zahidbilal/ecommerce-backend  # Local image name for Minikube
   tag: latest                     # Use latest tag for local build
   pullPolicy: IfNotPresent        # Don't pull from registry, use local
 
