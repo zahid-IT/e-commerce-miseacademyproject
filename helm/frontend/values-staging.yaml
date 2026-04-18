@@ -4,7 +4,7 @@ environment: staging
 replicaCount: 2
 
 image:
-  repository: zahidbilal/e-commerce-miseacademyproject-frontend
+  repository: zahidbilal/ecommerce-backend
   tag: staging-latest
   pullPolicy: Always
 

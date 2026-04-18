@@ -4,7 +4,7 @@ environment: production
 replicaCount: 3
 
 image:
-  repository: zahidbilal/e-commerce-miseacademyproject-frontend
+  repository: zahidbilal/ecommerce-backend
   tag: prod-latest
   pullPolicy: IfNotPresent
 
