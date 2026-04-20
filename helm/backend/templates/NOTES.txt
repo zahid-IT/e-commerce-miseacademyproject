@@ -4,7 +4,11 @@ Your release is named {{ .Release.Name }}.
 
 To get the backend URL, run these commands:
 {{- if .Values.ingress.enabled }}
-  https://{{ index .Values.ingress.hosts 0 host }}
+  {{- if .Values.ingress.hosts }}
+  https://{{ index .Values.ingress.hosts 0 .host | default "localhost" }}
+  {{- else }}
+  https://localhost
+  {{- end }}
 {{- else if contains "NodePort" .Values.service.type }}
   export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "backend.fullname" . }})
   export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
