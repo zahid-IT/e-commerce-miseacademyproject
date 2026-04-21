@@ -9,7 +9,7 @@ pipeline {
     agent any
     
     environment {
-        DOCKER_REGISTRY = docker push zahidbilal/e-commerce-miseacademyproject
+        DOCKER_REGISTRY = zahidbilal/e-commerce-miseacademyproject
         GITOPS_REPO = https://github.com/zahid-IT/e-commerce-miseacademyproject.git
         
         DEV_BRANCH = 'main'
