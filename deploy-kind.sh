@@ -193,19 +193,6 @@ nodes:
         nodeRegistration:
           kubeletExtraArgs:
             node-labels: "node-role.kubernetes.io/worker=true,workload=frontend"
-  
-  # Worker node 3 - MongoDB dedicated
-  - role: worker
-    labels:
-      node-role.kubernetes.io/worker: "true"
-      workload-type: "database"
-    kubeadmConfigPatches:
-      - |
-        kind: JoinConfiguration
-        nodeRegistration:
-          kubeletExtraArgs:
-            node-labels: "node-role.kubernetes.io/worker=true,workload=database"
-
 # Network configuration
 networking:
   apiServerAddress: "0.0.0.0"
