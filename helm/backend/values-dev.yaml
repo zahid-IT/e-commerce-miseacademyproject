@@ -1,43 +1,51 @@
-# Development Environment Values for KIND
-
 environment: dev
 replicaCount: 1
 
-# Image configuration
 image:
   repository: zahidbilal/ecommerce-backend
   tag: latest
   pullPolicy: IfNotPresent
 
-# Service configuration
+config:
+  port: 3000
+  logLevel: debug
+  corsOrigin: "*"
+  jwtSecret: "dev-jwt-secret-2024"
+  jwtRefreshSecret: "dev-refresh-secret-2024"
+  jwtExpiresIn: "7d"
+  rateLimit:
+    windowMs: 60000
+    max: 1000
+
+# MongoDB Configuration
+mongodb:
+  enabled: true
+  architecture: standalone
+  persistence:
+    enabled: false  # No persistence for dev
+  auth:
+    enabled: true
+    rootPassword: "root123"
+    username: "ecommerce_user"
+    password: "user123"
+    database: "ecommerce_dev"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+networkPolicy:
+  enabled: false
+
 service:
   type: NodePort
   port: 3000
   targetPort: 3000
-  nodePort: 30080
+  nodePort: 31930
 
-# Ingress - disabled for KIND
-ingress:
-  enabled: false
-
-# MongoDB - disabled (deployed separately)
-mongodb:
-  enabled: false
-
-# Network Policy - disabled for dev
-networkPolicy:
-  enabled: false
-
-# Service Account
-serviceAccount:
-  create: false
-  name: ""
-
-# Security contexts
-podSecurityContext: {}
-securityContext: {}
-
-# Resource limits
 resources:
   requests:
     memory: 256Mi
@@ -46,53 +54,16 @@ resources:
     memory: 512Mi
     cpu: 500m
 
-# Autoscaling - disabled for dev
-autoscaling:
+ingress:
   enabled: false
 
-# Service Monitor - disabled for dev
-serviceMonitor:
-  enabled: false
-
-# Prometheus Rules
-prometheusRule:
-  enabled: false
-
-# Persistence - disabled for dev
-persistence:
-  enabled: false
-
-# Backup - disabled for dev
-backup:
-  enabled: false
-
-# Application configuration
-config:
-  logLevel: debug
-  corsOrigin: "*"
-  jwtSecret: "dev_jwt_8xK9#mP2$vL5&nQ8@rT1!wE4^yU7*iO3(2024)"
-  jwtRefreshSecret: "dev_refresh_7f3e8a2c9b1d4f6h8j0k2l4n6p8r0t2v2024"
-  jwtExpiresIn: "7d"
-  mongoUri: "mongodb://ecommerce:ecommerce123@mongodb.ecommerce-dev.svc.cluster.local:27017/ecommerce"
-  rateLimit:
-    windowMs: 60000
-    max: 1000
-
-# Feature flags
-features:
-  paymentsEnabled: false
-  reviewsEnabled: true
-  wishlistEnabled: true
-
-# Monitoring - disabled for dev
 monitoring:
   enabled: false
 
-# Probes
-readinessProbe:
-  initialDelaySeconds: 5
-  periodSeconds: 10
-
 livenessProbe:
-  initialDelaySeconds: 15
-  periodSeconds: 20
+  enabled: true
+  initialDelaySeconds: 30
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10

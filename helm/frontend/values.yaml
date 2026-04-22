@@ -1,48 +1,46 @@
-# Default values for frontend
 replicaCount: 1
 
 image:
-  repository: your-registry.io/ecommerce/frontend
-  tag: latest
+  repository: zahidbilal/ecommerce-frontend
+  tag: dev-latest
   pullPolicy: IfNotPresent
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 80
   targetPort: 80
+  nodePort: 30081
 
+# Disable ingress - this is the key fix
 ingress:
   enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: frontend.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+
+config:
+  apiUrl: "http://ecommerce-backend.backend:3000/api"
+  environment: development
+  enableAnalytics: "false"
+  enableDebugTools: "true"
 
 resources:
-  limits:
-    cpu: 200m
-    memory: 256Mi
   requests:
-    cpu: 100m
     memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 200m
+
+livenessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 15
+
+readinessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
 
 autoscaling:
   enabled: false
-  minReplicas: 1
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 80
 
-nodeSelector: {}
-tolerations: []
-affinity: {}
-
-# Environment variables
-config:
-  apiUrl: "http://backend:3000"
-  environment: production
-
-extraEnv: []
+monitoring:
+  enabled: false

@@ -26,20 +26,24 @@ spec:
           value: {{ .Values.config.apiUrl | quote }}
         - name: NODE_ENV
           value: {{ .Values.config.environment | quote }}
-        {{- with .Values.extraEnv }}
-        {{- toYaml . | nindent 8 }}
-        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: {{ include "frontend.fullname" . }}-config
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
+        {{- if .Values.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
-            path: /
+            path: {{ .Values.livenessProbe.path }}
             port: http
-          initialDelaySeconds: 30
-          periodSeconds: 10
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
-            path: /
+            path: {{ .Values.readinessProbe.path }}
             port: http
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+        {{- end }}

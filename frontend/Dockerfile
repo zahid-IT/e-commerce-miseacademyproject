@@ -1,34 +1,32 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY pnpm-lock.yaml yarn.lock* ./
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci
+# Fix AJV issue + clean install
+RUN rm -rf node_modules package-lock.json && \
+    npm cache clean --force && \
+    npm install ajv@8 ajv-keywords@5 --save-exact && \
+    npm install --legacy-peer-deps --no-audit --no-fund
 
-# Copy source code
 COPY . .
 
-# Build the app
 RUN npm run build
 
-# Production stage with nginx
+# Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built files from builder
-COPY --from=builder /app/build /usr/share/nginx/html
+RUN rm -rf /usr/share/nginx/html/*
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
