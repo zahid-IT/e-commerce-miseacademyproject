@@ -1,5 +1,12 @@
-const { productModel } = require("../schemas/products")
-module.exports = listProducts = async (req, res) => {
-    const result = await productModel.find()
-    res.status(200).json(result)
-}
+const Product = require("../schemas/products");
+
+module.exports = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ createdAt: -1 });
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
