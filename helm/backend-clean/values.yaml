@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  repository: zahidbilal/ecommerce-backend
+  tag: latest
+
+service:
+  port: 3000
+
+secret:
+  name: backend-secret
+
+ingress:
+  enabled: true
+  className: nginx
+  path: /
+  pathType: Prefix
+
+serviceAccount:
+  create: true
+
+# ✅ ADD THIS
+autoscaling:
+  enabled: false
