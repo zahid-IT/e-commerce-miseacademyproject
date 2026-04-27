@@ -2,21 +2,19 @@ replicaCount: 1
 
 image:
   repository: zahidbilal/ecommerce-frontend
-  tag: dev-latest
+  tag: latest
   pullPolicy: IfNotPresent
 
 service:
-  type: NodePort
+  type: ClusterIP
   port: 80
   targetPort: 80
-  nodePort: 30081
 
-# Disable ingress - this is the key fix
 ingress:
   enabled: false
 
 config:
-  apiUrl: "http://ecommerce-backend.backend:3000/api"
+  apiUrl: "/api"
   environment: development
   enableAnalytics: "false"
   enableDebugTools: "true"
