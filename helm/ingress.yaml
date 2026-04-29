@@ -20,6 +20,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: ecommerce-frontend
+            name: frontend
             port:
               number: 80
