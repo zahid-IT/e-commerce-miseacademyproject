@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "backend.fullname" . }}
+  name: {{ include "backend-clean.fullname" . }}
   labels:
-    {{- include "backend.labels" . | nindent 4 }}
+    {{- include "backend-clean.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ include "backend.name" . }}
+      app: {{ include "backend-clean.name" . }}
   template:
     metadata:
       labels:
-        app: {{ include "backend.name" . }}
+        app: {{ include "backend-clean.name" . }}
     spec:
-      serviceAccountName: {{ include "backend.serviceAccountName" . }}
+      serviceAccountName: {{ include "backend-clean.serviceAccountName" . }}
       containers:
       - name: backend
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
@@ -37,11 +37,9 @@ spec:
               key: JWT_SECRET
 
         - name: PORT
-          value: "{{ .Values.config.port | default "3000" }}"
-
+          value: "{{ (default dict .Values.config).port | default "3000" }}"
         - name: NODE_ENV
-          value: "{{ .Values.config.environment | default "production" }}"
-
+          value: "{{ (default dict .Values.config).environment | default "production" }}"
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
 
