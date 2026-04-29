@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "backend-clean.fullname" . }}
+  labels:
+    {{- include "backend-clean.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "backend-clean.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "backend-clean.name" . }}
+    spec:
+      serviceAccountName: {{ include "backend-clean.serviceAccountName" . }}
+      containers:
+      - name: backend
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 3000
+
+        env:
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secret.name }}
+              key: MONGODB_URI
+
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secret.name }}
+              key: JWT_SECRET
+
+        - name: PORT
+          value: "{{ (default dict .Values.config).port | default "3000" }}"
+        - name: NODE_ENV
+          value: "{{ (default dict .Values.config).environment | default "production" }}"
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5

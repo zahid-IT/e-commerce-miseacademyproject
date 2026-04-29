@@ -32,4 +32,7 @@ module.exports = {
     res.json({ message: 'Logout endpoint' });
   }
 };
+<<<<<<< HEAD
 
+=======
+>>>>>>> main

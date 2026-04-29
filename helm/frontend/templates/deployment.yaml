@@ -36,6 +36,7 @@ spec:
           value: {{ .Values.config.apiUrl | quote }}
         - name: REACT_APP_ENVIRONMENT
           value: {{ .Values.config.environment | quote }}
+<<<<<<< HEAD
         - name: REACT_APP_ENABLE_ANALYTICS
           value: {{ .Values.config.enableAnalytics | quote }}
         - name: REACT_APP_ENABLE_DEBUG_TOOLS
@@ -43,6 +44,11 @@ spec:
         {{- with .Values.extraEnv }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
+=======
+        envFrom:
+        - configMapRef:
+            name: {{ include "frontend.fullname" . }}-config
+>>>>>>> main
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
         {{- if .Values.livenessProbe.enabled }}
@@ -52,8 +58,11 @@ spec:
             port: http
           initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+<<<<<<< HEAD
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+=======
+>>>>>>> main
         {{- end }}
         {{- if .Values.readinessProbe.enabled }}
         readinessProbe:
@@ -62,6 +71,7 @@ spec:
             port: http
           initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
           periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+<<<<<<< HEAD
           timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
           failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         {{- end }}
@@ -85,3 +95,6 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+=======
+        {{- end }}
+>>>>>>> main

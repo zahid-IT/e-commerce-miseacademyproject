@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 #cat > helm/backend/values-dev.yaml << 'EOF'
+=======
+>>>>>>> main
 environment: dev
 replicaCount: 1
 
 image:
+<<<<<<< HEAD
   repository: zahidbilal/ecommerce-backend  # Local image name for Minikube
   tag: latest                     # Use latest tag for local build
   pullPolicy: IfNotPresent        # Don't pull from registry, use local
@@ -19,18 +23,36 @@ config:
   jwtRefreshSecret: "dev_refresh_7f3e8a2c9b1d4f6h8j0k2l4n6p8r0t2v2024"
   jwtExpiresIn: "7d"
   
+=======
+  repository: zahidbilal/ecommerce-backend
+  tag: latest
+  pullPolicy: IfNotPresent
+
+config:
+  port: 3000
+  logLevel: debug
+  corsOrigin: "*"
+  jwtSecret: "dev-jwt-secret-2024"
+  jwtRefreshSecret: "dev-refresh-secret-2024"
+  jwtExpiresIn: "7d"
+>>>>>>> main
   rateLimit:
     windowMs: 60000
     max: 1000
 
+<<<<<<< HEAD
 # ============================================
 # MONGODB CONFIGURATION WITH CREDENTIALS
 # ============================================
+=======
+# MongoDB Configuration
+>>>>>>> main
 mongodb:
   enabled: true
   architecture: standalone
   persistence:
     enabled: false  # No persistence for dev
+<<<<<<< HEAD
   
   auth:
     enabled: true
@@ -43,6 +65,14 @@ mongodb:
     enabled: false
     uri: ""
   
+=======
+  auth:
+    enabled: true
+    rootPassword: "root123"
+    username: "ecommerce_user"
+    password: "user123"
+    database: "ecommerce_dev"
+>>>>>>> main
   resources:
     requests:
       memory: 256Mi
@@ -50,6 +80,7 @@ mongodb:
     limits:
       memory: 512Mi
       cpu: 500m
+<<<<<<< HEAD
   
   backup:
     enabled: false
@@ -61,6 +92,17 @@ features:
   paymentsEnabled: false
   reviewsEnabled: true
   wishlistEnabled: true
+=======
+
+networkPolicy:
+  enabled: false
+
+service:
+  type: NodePort
+  port: 3000
+  targetPort: 3000
+  nodePort: 31930
+>>>>>>> main
 
 # ============================================
 # RESOURCE LIMITS
@@ -77,7 +119,11 @@ resources:
 # INGRESS CONFIGURATION - DISABLED FOR MINIKUBE
 # ============================================
 ingress:
+<<<<<<< HEAD
   enabled: false  # ← CHANGED: Disable ingress for Minikube
+=======
+  enabled: false
+>>>>>>> main
 
 # ============================================
 # SERVICE TYPE - ADD THIS FOR MINIKUBE
@@ -94,6 +140,7 @@ service:
 monitoring:
   enabled: false
 
+<<<<<<< HEAD
 # ============================================
 # PROBES
 # ============================================
@@ -103,3 +150,12 @@ readinessProbe:
 livenessProbe:
   initialDelaySeconds: 15
 
+=======
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+>>>>>>> main

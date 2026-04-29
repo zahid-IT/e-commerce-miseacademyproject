@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Kind: Cluster
 
 
@@ -59,4 +60,23 @@ nodes:
 networking:
 
 
+=======
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ecommerce-cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
+      - containerPort: 30081
+        hostPort: 30081
+  - role: worker
+    labels:
+      workload: backend
+  - role: worker
+    labels:
+      workload: frontend
+networking:
+>>>>>>> main
   apiServerAddress: "0.0.0.0"

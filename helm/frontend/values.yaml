@@ -1,9 +1,16 @@
+<<<<<<< HEAD
 #cat > helm/frontend/values.yaml << 'EOF'
 # Default values for frontend
 replicaCount: 1
 
 image:
   repository: zahidbilal/e-commerce-miseacademyproject-frontend
+=======
+replicaCount: 1
+
+image:
+  repository: zahidbilal/ecommerce-frontend
+>>>>>>> main
   tag: latest
   pullPolicy: IfNotPresent
 
@@ -18,29 +25,35 @@ service:
 
 ingress:
   enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: frontend.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+
+config:
+  apiUrl: "/api"
+  environment: development
+  enableAnalytics: "false"
+  enableDebugTools: "true"
 
 resources:
-  limits:
-    cpu: 200m
-    memory: 256Mi
   requests:
-    cpu: 100m
     memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 256Mi
+    cpu: 200m
+
+livenessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 15
+
+readinessProbe:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
 
 autoscaling:
   enabled: false
-  minReplicas: 1
-  maxReplicas: 10
-  targetCPUUtilizationPercentage: 80
 
+<<<<<<< HEAD
 nodeSelector: {}
 tolerations: []
 affinity: {}
@@ -80,3 +93,7 @@ readinessProbe:
   periodSeconds: 5
   timeoutSeconds: 3
   failureThreshold: 3
+=======
+monitoring:
+  enabled: false
+>>>>>>> main
