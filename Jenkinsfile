@@ -5,7 +5,7 @@ pipeline {
         REGISTRY = 'docker.io/zahidbilal'
         BACKEND_IMAGE = 'ecommerce-backend'
         FRONTEND_IMAGE = 'ecommerce-frontend'
-        GITOPS_REPO = https://github.com/zahid-IT/e-commerce-miseacademyproject.git
+        GITOPS_REPO = 'https://github.com/zahid-IT/e-commerce-miseacademyproject.git '
     }
 
     stages {
