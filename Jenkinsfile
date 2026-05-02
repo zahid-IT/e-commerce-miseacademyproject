@@ -20,7 +20,6 @@ pipeline {
             }
         }
 
-        // ✅ Test stage skipped safely
         stage('Test') {
             steps {
                 echo "Skipping tests for now"
@@ -29,14 +28,15 @@ pipeline {
 
         stage('Docker Login') {
             steps {
-                container('docker') {
+                // Use Docker from host instead of a container
+                script {
                     withCredentials([usernamePassword(
                         credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'USER',
-                        passwordVariable: 'PASS'
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
                     )]) {
                         sh """
-                            echo \$PASS | docker login -u \$USER --password-stdin
+                            echo \$DOCKER_PASS | docker login -u \$DOCKER_USER --password-stdin
                         """
                     }
                 }
@@ -45,10 +45,12 @@ pipeline {
 
         stage('Build Backend Image') {
             steps {
-                container('docker') {
+                script {
                     sh """
-                        docker build -t $REGISTRY/$BACKEND_IMAGE:$GIT_SHA backend/
+                        docker build -t $REGISTRY/$BACKEND_IMAGE:$GIT_SHA ./backend
+                        docker tag $REGISTRY/$BACKEND_IMAGE:$GIT_SHA $REGISTRY/$BACKEND_IMAGE:latest
                         docker push $REGISTRY/$BACKEND_IMAGE:$GIT_SHA
+                        docker push $REGISTRY/$BACKEND_IMAGE:latest
                     """
                 }
             }
@@ -56,10 +58,12 @@ pipeline {
 
         stage('Build Frontend Image') {
             steps {
-                container('docker') {
+                script {
                     sh """
-                        docker build -t $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA frontend/
+                        docker build -t $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA ./frontend
+                        docker tag $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA $REGISTRY/$FRONTEND_IMAGE:latest
                         docker push $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA
+                        docker push $REGISTRY/$FRONTEND_IMAGE:latest
                     """
                 }
             }
@@ -67,7 +71,8 @@ pipeline {
 
         stage('Update GitOps Repo') {
             steps {
-                container('tools') {
+                script {
+                    // Create GitOps repo structure if it doesn't exist
                     withCredentials([usernamePassword(
                         credentialsId: 'github-token-creds',
                         usernameVariable: 'GIT_USER',
@@ -75,29 +80,85 @@ pipeline {
                     )]) {
                         sh """
                             rm -rf gitops
-
-                            git clone https://\$GIT_USER:\$GIT_TOKEN@github.com/zahid-IT/YOUR_GITOPS_REPO.git gitops
-                            cd gitops
-
-                            # select environment
-                            if [ "$BRANCH" = "dev" ]; then
-                                FILE=dev/values.yaml
-                            elif [ "$BRANCH" = "staging" ]; then
-                                FILE=staging/values.yaml
+                            
+                            # Clone or create GitOps repo
+                            if git ls-remote https://\$GIT_USER:\$GIT_TOKEN@github.com/zahid-IT/ecommerce-gitops.git; then
+                                git clone https://\$GIT_USER:\$GIT_TOKEN@github.com/zahid-IT/ecommerce-gitops.git gitops
                             else
-                                FILE=prod/values.yaml
+                                mkdir gitops && cd gitops && git init
+                                git remote add origin https://\$GIT_USER:\$GIT_TOKEN@github.com/zahid-IT/ecommerce-gitops.git
+                                cd ..
                             fi
-
-                            # update image tags
-                            sed -i "s/tag:.*/tag: $GIT_SHA/g" \$FILE
-
+                            
+                            cd gitops
+                            
+                            # Create directory structure if not exists
+                            mkdir -p backend/overlays/dev
+                            mkdir -p backend/overlays/staging
+                            mkdir -p backend/overlays/prod
+                            mkdir -p frontend/overlays/dev
+                            mkdir -p frontend/overlays/staging
+                            mkdir -p frontend/overlays/prod
+                            
+                            # Determine environment based on branch
+                            if [ "$BRANCH" = "dev" ] || [ "$BRANCH" = "main" ]; then
+                                ENV="dev"
+                            elif [ "$BRANCH" = "staging" ]; then
+                                ENV="staging"
+                            else
+                                ENV="prod"
+                            fi
+                            
+                            # Update backend values
+                            cat > backend/overlays/\$ENV/values.yaml << YAML
+                            image:
+                              repository: $REGISTRY/$BACKEND_IMAGE
+                              tag: $GIT_SHA
+                            replicas: 1
+                            YAML
+                            
+                            # Update frontend values
+                            cat > frontend/overlays/\$ENV/values.yaml << YAML
+                            image:
+                              repository: $REGISTRY/$FRONTEND_IMAGE
+                              tag: $GIT_SHA
+                            replicas: 1
+                            YAML
+                            
+                            # Create kustomization.yaml
+                            cat > backend/overlays/\$ENV/kustomization.yaml << KUSTOMIZE
+                            apiVersion: kustomize.config.k8s.io/v1beta1
+                            kind: Kustomization
+                            resources:
+                              - ../../base
+                            images:
+                              - name: $REGISTRY/$BACKEND_IMAGE
+                                newTag: $GIT_SHA
+                            KUSTOMIZE
+                            
                             git config user.email "jenkins@ci.com"
-                            git config user.name "jenkins"
-
+                            git config user.name "Jenkins CI"
                             git add .
                             git commit -m "Update images to $GIT_SHA" || echo "No changes to commit"
-
-                            git push https://\$GIT_USER:\$GIT_TOKEN@github.com/zahid-IT/YOUR_GITOPS_REPO.git main
+                            git push origin main
+                        """
+                    }
+                }
+            }
+        }
+        
+        // Add ArgoCD sync stage
+        stage('Sync ArgoCD') {
+            steps {
+                script {
+                    withCredentials([string(
+                        credentialsId: 'argocd-token',
+                        variable: 'ARGOCD_TOKEN'
+                    )]) {
+                        sh """
+                            # Sync ArgoCD application
+                            argocd app sync ecommerce-backend --grpc-web
+                            argocd app sync ecommerce-frontend --grpc-web
                         """
                     }
                 }
@@ -107,10 +168,12 @@ pipeline {
 
     post {
         success {
-            echo "✅ Deployment triggered via ArgoCD with image tag: $GIT_SHA"
+            echo "✅ Pipeline completed successfully! Image tag: $GIT_SHA"
+            echo "📦 Images pushed to Docker Hub"
+            echo "🚀 ArgoCD will sync automatically"
         }
         failure {
-            echo "❌ Pipeline failed"
+            echo "❌ Pipeline failed! Check the logs above."
         }
     }
 }
