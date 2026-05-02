@@ -1,109 +1,94 @@
-#pipeline {
-#    agent any
-#    
-#    environment {
-#        DOCKER_REGISTRY = docker push zahidbilal/e-commerce-miseacademyproject
-#        GITOPS_REPO = https://github.com/zahid-IT/e-commerce-miseacademyproject.git
-        
 pipeline {
     agent any
-    
+
     environment {
-        DOCKER_REGISTRY = docker push zahidbilal/e-commerce-miseacademyproject
+        REGISTRY = 'docker.io/zahidbilal'
+        BACKEND_IMAGE = 'ecommerce-backend'
+        FRONTEND_IMAGE = 'ecommerce-frontend'
         GITOPS_REPO = https://github.com/zahid-IT/e-commerce-miseacademyproject.git
-        
-        DEV_BRANCH = 'main'
-        STAGING_BRANCH = 'staging'
-        PROD_BRANCH = 'production'
-        
-        // MongoDB specific
-        MONGODB_VERSION = '5.0'
     }
-    
+
     stages {
-        stage('Determine Environment') {
+
+        stage('Checkout Source') {
             steps {
+                checkout scm
                 script {
-                    switch(env.BRANCH_NAME) {
-                        case env.DEV_BRANCH:
-                            env.DEPLOY_ENV = 'dev'
-                            env.IMAGE_TAG = "${env.BUILD_NUMBER}-dev"
-                            env.MONGODB_ARCHITECTURE = 'standalone'
-                            break
-                        case env.STAGING_BRANCH:
-                            env.DEPLOY_ENV = 'staging'
-                            env.IMAGE_TAG = "${env.BUILD_NUMBER}-staging"
-                            env.MONGODB_ARCHITECTURE = 'replicaset'
-                            break
-                        case env.PROD_BRANCH:
-                            env.DEPLOY_ENV = 'production'
-                            env.IMAGE_TAG = "${env.BUILD_NUMBER}-prod"
-                            env.MONGODB_ARCHITECTURE = 'external'
-                            break
-                        default:
-                            error "Unsupported branch: ${env.BRANCH_NAME}"
-                    }
+                    env.GIT_SHA = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    env.BRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
                 }
             }
         }
-        
+
+        stage('Test') {
+            steps {
+                sh 'make test'
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh """
+                        echo $PASS | docker login -u $USER --password-stdin
+                    """
+                }
+            }
+        }
+
         stage('Build Backend Image') {
             steps {
-                dir('backend') {
-                    sh """
-                        docker build \
-                            --build-arg NODE_ENV=${env.DEPLOY_ENV} \
-                            -t ${DOCKER_REGISTRY}/backend:${env.IMAGE_TAG} \
-                            -t ${DOCKER_REGISTRY}/backend:${env.DEPLOY_ENV}-latest \
-                            .
-                        docker push ${DOCKER_REGISTRY}/backend:${env.IMAGE_TAG}
-                        docker push ${DOCKER_REGISTRY}/backend:${env.DEPLOY_ENV}-latest
-                    """
-                }
+                sh """
+                    docker build -t $REGISTRY/$BACKEND_IMAGE:$GIT_SHA backend/
+                    docker push $REGISTRY/$BACKEND_IMAGE:$GIT_SHA
+                """
             }
         }
-        
-        stage('Initialize MongoDB Database') {
-            when { 
-                expression { env.DEPLOY_ENV != 'production' } 
-            }
+
+        stage('Build Frontend Image') {
             steps {
-                script {
-                    dir('backend') {
-                        sh """
-                            # Wait for MongoDB to be ready
-                            kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=mongodb \
-                                -n ecommerce-${env.DEPLOY_ENV} --timeout=300s
-                            
-                            # Run initialization script
-                            kubectl exec -n ecommerce-${env.DEPLOY_ENV} \
-                                deployment/backend -- \
-                                node scripts/init-mongodb.js
-                        """
-                    }
-                }
+                sh """
+                    docker build -t $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA frontend/
+                    docker push $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA
+                """
             }
         }
-        
-        stage('Update GitOps Repository') {
+
+        stage('Update GitOps Repo') {
             steps {
-                script {
+                withCredentials([usernamePassword(credentialsId: 'github-token-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                     sh """
-                        git clone ${GITOPS_REPO} gitops-temp
-                        cd gitops-temp
-                        
-                        # Update values with MongoDB configuration
-                        yq eval '.mongodb.architecture = "${env.MONGODB_ARCHITECTURE}"' -i environments/${env.DEPLOY_ENV}/values.yaml
-                        yq eval '.backend.image.tag = "${env.IMAGE_TAG}"' -i environments/${env.DEPLOY_ENV}/values.yaml
-                        
-                        git config user.email "jenkins@example.com"
-                        git config user.name "Jenkins CI"
+                        rm -rf gitops
+
+                        git clone https://$GIT_USER:$GIT_TOKEN@$GITOPS_REPO gitops
+                        cd gitops
+
+                        if [ "$BRANCH" = "dev" ]; then
+                            FILE=dev/values.yaml
+                        elif [ "$BRANCH" = "staging" ]; then
+                            FILE=staging/values.yaml
+                        else
+                            FILE=prod/values.yaml
+                        fi
+
+                        sed -i "s/tag:.*/tag: $GIT_SHA/g" $FILE
+
+                        git config user.email "jenkins@ci.com"
+                        git config user.name "jenkins"
+
                         git add .
-                        git commit -m "Deploy ecommerce ${env.IMAGE_TAG} to ${env.DEPLOY_ENV} with MongoDB"
-                        git push
+                        git commit -m "Update images to $GIT_SHA"
+                        
+                        git push https://$GIT_USER:$GIT_TOKEN@$GITOPS_REPO main
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployed via ArgoCD with image: $GIT_SHA"
         }
     }
 }
