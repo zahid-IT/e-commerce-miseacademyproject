@@ -113,7 +113,7 @@ pipeline {
                 )]) {
                     sh '''
                         rm -rf gitops
-                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/zahid-IT/ecommerce-gitops.git gitops || echo "Repo may not exist yet"
+                        git clone https://$GIT_USER:$GIT_TOKEN@github.com/zahid-IT/e-commerce-miseacademyproject.git gitops || echo "Repo may not exist yet"
                         
                         if [ -d "gitops" ]; then
                             cd gitops
