@@ -6,7 +6,7 @@ pipeline {
         BACKEND_IMAGE = 'ecommerce-backend'
         FRONTEND_IMAGE = 'ecommerce-frontend'
         // Update with your actual GitOps repo
-        GITOPS_REPO = 'https://github.com/zahid-IT/ecommerce-gitops.git'
+        GITOPS_REPO = 'https://github.com/zahid-IT/e-commerce-miseacademyproject.git'
         // K3s server IP - CHANGE THIS
         K3S_SERVER = '34.235.131.161'  // Your K3s EC2 instance IP
         K3S_USER = 'ubuntu'
