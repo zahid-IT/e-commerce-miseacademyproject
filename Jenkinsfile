@@ -5,8 +5,8 @@ pipeline {
         REGISTRY = 'docker.io/zahidbilal'
         BACKEND_IMAGE = 'ecommerce-backend'
         FRONTEND_IMAGE = 'ecommerce-frontend'
-        K3S_SERVER = '34.235.131.161'
-        K3S_USER = 'ubuntu'
+        GIT_REPO = 'https://github.com/your-org/your-repo'  # Your Git repo URL
+        GIT_BRANCH = 'main'  # Branch ArgoCD watches
     }
 
     stages {
@@ -19,30 +19,6 @@ pipeline {
                     env.BRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
                     echo "Building branch: ${env.BRANCH}, commit: ${env.GIT_SHA}"
                 }
-            }
-        }
-
-        stage('Setup kubectl') {
-            steps {
-                sh '''
-                    # Download kubectl to workspace (no sudo needed)
-                    if ! command -v kubectl &> /dev/null; then
-                        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                        chmod +x kubectl
-                        # Add to PATH for this session
-                        export PATH=$PATH:$PWD
-                    fi
-                    
-                    # Copy kubeconfig from K3s server
-                    mkdir -p ~/.kube
-                    scp -o StrictHostKeyChecking=no $K3S_USER@$K3S_SERVER:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-                    
-                    # Update server IP in kubeconfig
-                    sed -i "s/127.0.0.1/$K3S_SERVER/g" ~/.kube/config
-                    
-                    # Test connection
-                    ./kubectl get nodes || kubectl get nodes
-                '''
             }
         }
 
@@ -82,38 +58,47 @@ pipeline {
             }
         }
 
-        stage('Deploy to K3s') {
+        stage('Update Git Manifests (Trigger ArgoCD)') {
             steps {
-                sh '''
-                    # Use kubectl from workspace
-                    export PATH=$PATH:$PWD
-                    
-                    # Update deployments
-                    kubectl set image deployment/ecommerce-backend -n dev \
-                        backend=$REGISTRY/$BACKEND_IMAGE:$GIT_SHA || true
-                    
-                    kubectl set image deployment/ecommerce-frontend -n dev \
-                        frontend=$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA || true
-                    
-                    # Wait for rollouts
-                    kubectl rollout status deployment/ecommerce-backend -n dev --timeout=5m || true
-                    kubectl rollout status deployment/ecommerce-frontend -n dev --timeout=5m || true
-                    
-                    # Show deployment status
-                    kubectl get pods -n dev
-                '''
+                script {
+                    // Check if we should auto-update Git or just wait for ArgoCD sync
+                    sh '''
+                        # Clone the Git repo containing Kubernetes manifests
+                        git clone $GIT_REPO /tmp/manifests-repo || true
+                        cd /tmp/manifests-repo
+                        git checkout $GIT_BRANCH
+                        
+                        # Update image tags in the manifest files
+                        sed -i "s|image: $REGISTRY/$BACKEND_IMAGE:.*|image: $REGISTRY/$BACKEND_IMAGE:$GIT_SHA|g" k8s/backend-deployment.yaml
+                        sed -i "s|image: $REGISTRY/$FRONTEND_IMAGE:.*|image: $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA|g" k8s/frontend-deployment.yaml
+                        
+                        # Commit and push changes
+                        git config user.email "jenkins@your-domain.com"
+                        git config user.name "Jenkins CI"
+                        git add .
+                        git commit -m "Update images to $GIT_SHA [skip ci]" || echo "No changes to commit"
+                        git push origin $GIT_BRANCH
+                        
+                        echo "✅ Git manifests updated. ArgoCD will auto-sync within 3 minutes."
+                    '''
+                }
             }
         }
     }
 
     post {
         success {
-            echo "✅ Pipeline successful! Deployed $GIT_SHA to K3s cluster"
-            echo "🌐 Frontend: http://${K3S_SERVER}:31047"
-            echo "🌐 Backend API: http://${K3S_SERVER}:31047/api/health"
+            echo "✅ Pipeline successful!"
+            echo "📦 Images pushed:"
+            echo "   - ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}"
+            echo "   - ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}"
+            echo "📝 Git manifests updated. ArgoCD will deploy to K3s automatically."
+            echo "🔗 Check ArgoCD UI at: https://<your-k3s-ip>:30443"
         }
         failure {
             echo "❌ Pipeline failed! Check logs above."
         }
+    }
+}
     }
 }
