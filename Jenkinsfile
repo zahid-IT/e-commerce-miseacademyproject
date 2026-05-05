@@ -6,7 +6,7 @@ pipeline {
         BACKEND_IMAGE = 'ecommerce-backend'
         FRONTEND_IMAGE = 'ecommerce-frontend'
         GIT_REPO = 'https://github.com/zahid-IT/e-commerce-miseacademyproject.git'
-        GIT_BRANCH = 'main'  # Branch ArgoCD watches
+        GIT_BRANCH = 'main'
     }
 
     stages {
