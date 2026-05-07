@@ -12,9 +12,10 @@ spec:
     image: jenkins/inbound-agent:latest
 
   - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.23.2
-    command: ["/bin/sh","-c", "sleep 999999"]
-    tty: true
+  image: gcr.io/kaniko-project/executor:v1.23.2-debug
+  command:
+    - /busybox/cat
+  tty: true
 
   - name: git
     image: alpine/git:latest
