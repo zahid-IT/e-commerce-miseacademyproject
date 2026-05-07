@@ -7,25 +7,28 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+
+  restartPolicy: Never
+
   containers:
 
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
+    - name: jnlp
+      image: jenkins/inbound-agent:latest
 
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.23.2-debug
-    command:
-      - /busybox/cat
-    tty: true
-    volumeMounts:
-      - name: docker-config
-        mountPath: /kaniko/.docker
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command:
+        - /busybox/cat
+      tty: true
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
 
-  - name: git
-    image: alpine/git:latest
-    command:
-      - cat
-    tty: true
+    - name: git
+      image: alpine/git:latest
+      command:
+        - cat
+      tty: true
 
   volumes:
     - name: docker-config
@@ -71,7 +74,9 @@ spec:
                     /kaniko/executor \
                       --context=/home/jenkins/agent/workspace/mise-project_main/backend \
                       --dockerfile=/home/jenkins/agent/workspace/mise-project_main/backend/Dockerfile \
-                      --destination=$REGISTRY/$BACKEND_IMAGE:$GIT_SHA
+                      --destination=$REGISTRY/$BACKEND_IMAGE:$GIT_SHA \
+                      --snapshot-mode=redo \
+                      --use-new-run
                     """
                 }
             }
@@ -84,7 +89,9 @@ spec:
                     /kaniko/executor \
                       --context=/home/jenkins/agent/workspace/mise-project_main/frontend \
                       --dockerfile=/home/jenkins/agent/workspace/mise-project_main/frontend/Dockerfile \
-                      --destination=$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA
+                      --destination=$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA \
+                      --snapshot-mode=redo \
+                      --use-new-run
                     """
                 }
             }
