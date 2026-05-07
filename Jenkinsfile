@@ -13,7 +13,7 @@ spec:
 
   - name: kaniko
     image: gcr.io/kaniko-project/executor:v1.23.2
-    command: ["sleep", "999999"]
+    command: ["/bin/sh","-c", "sleep 999999"]
     tty: true
 
   - name: git
