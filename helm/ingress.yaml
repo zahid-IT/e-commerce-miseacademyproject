@@ -20,6 +20,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: forntend-frontend   # <-- FIX THIS
+            name: frontend
             port:
               number: 80
