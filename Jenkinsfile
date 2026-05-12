@@ -101,14 +101,13 @@ spec:
                 container('kaniko') {
 
                     sh """
-                    /kaniko/executor \
-                      --context=${WORKSPACE}/backend \
-                      --dockerfile=${WORKSPACE}/backend/Dockerfile \
-                      --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
-                      --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
-                      --cache=false \
-                      --snapshot-mode=redo
-                    """
+                  /kaniko/executor \
+                      --context=$WORKSPACE/frontend \
+                      --dockerfile=$WORKSPACE/frontend/Dockerfile \
+                      --destination=docker.io/zahidbilal/ecommerce-frontend:$GIT_SHA \
+                        --destination=docker.io/zahidbilal/ecommerce-frontend:latest \
+                        --cache=true \
+                        --cleanup
                 }
             }
         }
