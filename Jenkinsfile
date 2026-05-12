@@ -1,5 +1,4 @@
 pipeline {
-
     agent {
         kubernetes {
             inheritFrom 'default'
@@ -28,9 +27,11 @@ spec:
       command:
         - /busybox/cat
       tty: true
+
       volumeMounts:
         - name: docker-config
           mountPath: /kaniko/.docker
+
       resources:
         requests:
           cpu: "500m"
@@ -72,26 +73,24 @@ spec:
 
         stage('Checkout Source') {
             steps {
-
                 checkout scm
 
                 script {
 
                     env.GIT_SHA = sh(
-                        script: 'git rev-parse --short HEAD',
+                        script: "git rev-parse --short HEAD",
                         returnStdout: true
                     ).trim()
 
-                    env.BRANCH = sh(
-                        script: 'git branch --show-current || echo main',
-                        returnStdout: true
-                    ).trim()
+                    env.BRANCH = env.BRANCH_NAME ?: "main"
 
-                    env.BUILD_VERSION = "${BRANCH}-${GIT_SHA}"
+                    env.BUILD_VERSION = "${env.BRANCH}-${env.GIT_SHA}"
 
-                    echo "Branch: ${BRANCH}"
-                    echo "Commit: ${GIT_SHA}"
-                    echo "Build Version: ${BUILD_VERSION}"
+                    echo "====================================="
+                    echo "Branch: ${env.BRANCH}"
+                    echo "Commit: ${env.GIT_SHA}"
+                    echo "Build Version: ${env.BUILD_VERSION}"
+                    echo "====================================="
                 }
             }
         }
@@ -103,13 +102,12 @@ spec:
 
                     sh """
                     /kaniko/executor \
-                      --context=/home/jenkins/agent/workspace/mise-project_main/backend \
-                      --dockerfile=/home/jenkins/agent/workspace/mise-project_main/backend/Dockerfile \
-                      --destination=$REGISTRY/$BACKEND_IMAGE:$GIT_SHA \
-                      --destination=$REGISTRY/$BACKEND_IMAGE:latest \
+                      --context=${WORKSPACE}/backend \
+                      --dockerfile=${WORKSPACE}/backend/Dockerfile \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
                       --cache=false \
-                      --snapshot-mode=redo \
-                      --use-new-run
+                      --snapshot-mode=redo
                     """
                 }
             }
@@ -122,13 +120,13 @@ spec:
 
                     sh """
                     /kaniko/executor \
-                      --context=/home/jenkins/agent/workspace/mise-project_main/frontend \
-                      --dockerfile=/home/jenkins/agent/workspace/mise-project_main/frontend/Dockerfile \
-                      --destination=$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA \
-                      --destination=$REGISTRY/$FRONTEND_IMAGE:latest \
+                      --context=${WORKSPACE}/frontend \
+                      --dockerfile=${WORKSPACE}/frontend/Dockerfile \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
                       --cache=false \
                       --snapshot-mode=redo \
-                      --use-new-run
+                      --skip-unused-stages
                     """
                 }
             }
@@ -140,14 +138,14 @@ spec:
         success {
 
             echo "====================================="
-            echo "Images pushed successfully"
+            echo "Pipeline completed successfully"
+            echo ""
+            echo "Backend Image:"
+            echo "${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}"
+            echo ""
+            echo "Frontend Image:"
+            echo "${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}"
             echo "====================================="
-
-            echo "Backend:"
-            echo "$REGISTRY/$BACKEND_IMAGE:$GIT_SHA"
-
-            echo "Frontend:"
-            echo "$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA"
         }
 
         failure {
@@ -160,7 +158,6 @@ spec:
         always {
 
             echo "Cleaning workspace..."
-
             deleteDir()
         }
     }
