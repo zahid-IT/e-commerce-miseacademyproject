@@ -69,11 +69,10 @@ spec:
     }
 
     options {
-        timestamps()
-        ansiColor('xterm')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
-    }
+}
+    
 
     stages {
 
