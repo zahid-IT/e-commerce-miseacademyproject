@@ -1,25 +1,18 @@
-FROM node:18-alpine
+# Stage 1: base Node image
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files first (better caching)
+# install dependencies first (better caching)
 COPY package*.json ./
 
-# Clean install dependencies
-RUN npm ci --only=production || npm install --production
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
-# Verify bcryptjs is installed
-RUN npm list bcryptjs || npm install bcryptjs --production
-
-# Copy application source
+# copy source code
 COPY . .
 
-# Expose port
+# expose backend port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Run the application
+# start server
 CMD ["node", "server.js"]
