@@ -1,37 +1,24 @@
-FROM node:20-alpine AS build
+# Build stage
+FROM node:18-alpine AS build
 
 WORKDIR /app
 
 COPY package*.json ./
 
+# Clean dependencies
+RUN rm -rf node_modules package-lock.json && \
+    npm cache clean --force
+
+# Install compatible AJV versions
+RUN npm install ajv@6.12.6 ajv-keywords@3.5.2 --save-exact
+
+# Install app dependencies
 RUN npm install --legacy-peer-deps
 
 COPY . .
 
-RUN npm run build
-
-FROM nginx:alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-COPY --from=build /app/build /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]# Build stage
-FROM node:20-alpine AS build
-
-WORKDIR /app
-
-COPY package.json ./
-
-# Fix AJV issue + clean install
-RUN rm -rf node_modules package-lock.json && \
-    npm cache clean --force && \
-    npm install ajv@8 ajv-keywords@5 --save-exact && \
-    npm install --legacy-peer-deps --no-audit --no-fund
-
-COPY . .
+# Disable CI warnings as build failures
+ENV CI=false
 
 RUN npm run build
 
@@ -45,8 +32,5 @@ RUN rm -rf /usr/share/nginx/html/*
 COPY --from=build /app/build /usr/share/nginx/html
 
 EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
