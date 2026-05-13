@@ -76,9 +76,8 @@ spec:
                       --dockerfile=${WORKSPACE}/backend/Dockerfile \
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
-                      --cache=false \
-                      --cleanup=false \
-                      --snapshot-mode=redo
+                      --cache=true \
+                      --skip-unused-stages
                     """
                 }
             }
@@ -96,10 +95,7 @@ spec:
                       --dockerfile=${WORKSPACE}/frontend/Dockerfile \
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
-                      --cache=false \
-                      --cleanup=false \
-                      --snapshot-mode=redo \
-                      --skip-unused-stages
+                      --cache=true \
                     """
                 }
             }
