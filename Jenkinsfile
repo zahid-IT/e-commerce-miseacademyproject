@@ -13,7 +13,7 @@ spec:
   containers:
 
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      image: gcr.io/kaniko-project/executor:v1.23.2
       command:
         - /busybox/cat
       tty: true
@@ -76,8 +76,7 @@ spec:
                       --dockerfile=${WORKSPACE}/backend/Dockerfile \
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
-                      --cache=true \
-                      --skip-unused-stages
+                      --cache=false
                     """
                 }
             }
@@ -95,7 +94,8 @@ spec:
                       --dockerfile=${WORKSPACE}/frontend/Dockerfile \
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
-                      --cache=true \
+                      --cache=false \
+                      --skip-unused-stages
                     """
                 }
             }
@@ -105,12 +105,10 @@ spec:
     post {
 
         success {
-
             echo "Pipeline completed successfully"
         }
 
         failure {
-
             echo "Pipeline failed"
         }
     }
