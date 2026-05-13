@@ -3,64 +3,63 @@ pipeline {
     agent {
         kubernetes {
 
-            defaultContainer 'jnlp'
-
             yaml '''
 apiVersion: v1
 kind: Pod
 
 spec:
-  restartPolicy: Never
 
   volumes:
-    - name: docker-config
-      secret:
-        secretName: dockerhub-secret
-        items:
-          - key: .dockerconfigjson
-            path: config.json
-
-    - name: workspace-volume
+    - name: docker-sock
       emptyDir: {}
 
   containers:
 
-    - name: kaniko
-      image: gcr.io/kaniko-project/executor:v1.22.0-debug
+    - name: docker
+      image: docker:26-dind
+      securityContext:
+        privileged: true
       tty: true
 
       command:
-        - /busybox/sh
+        - dockerd-entrypoint.sh
 
       args:
-        - -c
-        - cat
+        - --host=tcp://0.0.0.0:2375
+        - --tls=false
 
       volumeMounts:
-        - name: docker-config
-          mountPath: /kaniko/.docker
+        - name: docker-sock
+          mountPath: /var/run
 
-        - name: workspace-volume
-          mountPath: /home/jenkins/agent
+    - name: docker-cli
+      image: docker:26-cli
+      tty: true
+
+      command:
+        - cat
+
+      env:
+        - name: DOCKER_HOST
+          value: tcp://localhost:2375
+
+      volumeMounts:
+        - name: docker-sock
+          mountPath: /var/run
 
     - name: jnlp
       image: jenkins/inbound-agent:latest
-      tty: true
-
-      volumeMounts:
-        - name: workspace-volume
-          mountPath: /home/jenkins/agent
 '''
         }
     }
 
     environment {
 
-        REGISTRY = 'docker.io/zahidbilal'
+        REGISTRY = "docker.io/zahidbilal"
 
-        BACKEND_IMAGE = 'ecommerce-backend'
+        BACKEND_IMAGE = "ecommerce-backend"
 
-        FRONTEND_IMAGE = 'ecommerce-frontend'
+        FRONTEND_IMAGE = "ecommerce-frontend"
     }
 
     stages {
@@ -77,8 +76,28 @@ spec:
                         script: 'git rev-parse --short HEAD',
                         returnStdout: true
                     ).trim()
+                }
+            }
+        }
 
-                    echo "Commit: ${env.GIT_SHA}"
+        stage('Docker Login') {
+
+            steps {
+
+                container('docker-cli') {
+
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'dockerhub-creds',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )
+                    ]) {
+
+                        sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        '''
+                    }
                 }
             }
         }
@@ -87,19 +106,17 @@ spec:
 
             steps {
 
-                container('kaniko') {
+                container('docker-cli') {
 
                     sh """
-                    /kaniko/executor \
-                      --context=${WORKSPACE}/backend \
-                      --dockerfile=${WORKSPACE}/backend/Dockerfile \
-                      --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
-                      --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
-                      --cache=false \
-                      --snapshot-mode=redo \
-                      --use-new-run \
-                      --single-snapshot \
-                      --cleanup=false
+                    docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} backend
+
+                    docker tag ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
+                               ${REGISTRY}/${BACKEND_IMAGE}:latest
+
+                    docker push ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}
+
+                    docker push ${REGISTRY}/${BACKEND_IMAGE}:latest
                     """
                 }
             }
@@ -109,19 +126,17 @@ spec:
 
             steps {
 
-                container('kaniko') {
+                container('docker-cli') {
 
                     sh """
-                    /kaniko/executor \
-                      --context=${WORKSPACE}/frontend \
-                      --dockerfile=${WORKSPACE}/frontend/Dockerfile \
-                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
-                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
-                      --cache=false \
-                      --snapshot-mode=redo \
-                      --use-new-run \
-                      --single-snapshot \
-                      --cleanup=false
+                    docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} frontend
+
+                    docker tag ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
+                               ${REGISTRY}/${FRONTEND_IMAGE}:latest
+
+                    docker push ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}
+
+                    docker push ${REGISTRY}/${FRONTEND_IMAGE}:latest
                     """
                 }
             }
@@ -132,12 +147,12 @@ spec:
 
         success {
 
-            echo "✅ Pipeline completed successfully"
+            echo "✅ Build completed"
         }
 
         failure {
 
-            echo "❌ Pipeline failed!"
+            echo "❌ Build failed"
         }
     }
 }
