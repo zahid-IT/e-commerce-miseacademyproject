@@ -26,7 +26,7 @@ spec:
   containers:
 
     - name: kaniko
-      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      image: gcr.io/kaniko-project/executor:v1.22.0-debug
       tty: true
 
       command:
@@ -55,8 +55,11 @@ spec:
     }
 
     environment {
+
         REGISTRY = 'docker.io/zahidbilal'
+
         BACKEND_IMAGE = 'ecommerce-backend'
+
         FRONTEND_IMAGE = 'ecommerce-frontend'
     }
 
@@ -93,7 +96,10 @@ spec:
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
                       --cache=false \
-                      --skip-unused-stages
+                      --snapshot-mode=redo \
+                      --use-new-run \
+                      --single-snapshot \
+                      --cleanup=false
                     """
                 }
             }
@@ -112,7 +118,10 @@ spec:
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
                       --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
                       --cache=false \
-                      --skip-unused-stages
+                      --snapshot-mode=redo \
+                      --use-new-run \
+                      --single-snapshot \
+                      --cleanup=false
                     """
                 }
             }
@@ -122,10 +131,12 @@ spec:
     post {
 
         success {
+
             echo "✅ Pipeline completed successfully"
         }
 
         failure {
+
             echo "❌ Pipeline failed!"
         }
     }
