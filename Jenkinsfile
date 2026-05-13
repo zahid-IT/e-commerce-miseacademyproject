@@ -12,24 +12,28 @@ spec:
 
   containers:
 
-    - name: docker
-      image: docker:24.0.5-cli
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
       command:
-        - cat
+        - /busybox/cat
       tty: true
 
       volumeMounts:
-        - name: docker-sock
-          mountPath: /var/run/docker.sock
+        - name: docker-config
+          mountPath: /kaniko/.docker
 
     - name: jnlp
       image: jenkins/inbound-agent:latest
       tty: true
 
   volumes:
-    - name: docker-sock
-      hostPath:
-        path: /var/run/docker.sock
+
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+        items:
+          - key: .dockerconfigjson
+            path: config.json
 '''
         }
     }
@@ -43,36 +47,19 @@ spec:
     stages {
 
         stage('Checkout') {
+
             steps {
+
                 checkout scm
 
                 script {
+
                     env.GIT_SHA = sh(
                         script: 'git rev-parse --short HEAD',
                         returnStdout: true
                     ).trim()
-                }
-            }
-        }
 
-        stage('Docker Login') {
-
-            steps {
-
-                container('docker') {
-
-                    withCredentials([
-                        usernamePassword(
-                            credentialsId: 'dockerhub-creds',
-                            usernameVariable: 'DOCKER_USER',
-                            passwordVariable: 'DOCKER_PASS'
-                        )
-                    ]) {
-
-                        sh '''
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        '''
-                    }
+                    echo "Commit: ${GIT_SHA}"
                 }
             }
         }
@@ -81,12 +68,17 @@ spec:
 
             steps {
 
-                container('docker') {
+                container('kaniko') {
 
                     sh """
-                    docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} ./backend
-
-                    docker push ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}
+                    /kaniko/executor \
+                      --context=${WORKSPACE}/backend \
+                      --dockerfile=${WORKSPACE}/backend/Dockerfile \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
+                      --cache=false \
+                      --cleanup=false \
+                      --snapshot-mode=redo
                     """
                 }
             }
@@ -96,15 +88,34 @@ spec:
 
             steps {
 
-                container('docker') {
+                container('kaniko') {
 
                     sh """
-                    docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} ./frontend
-
-                    docker push ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}
+                    /kaniko/executor \
+                      --context=${WORKSPACE}/frontend \
+                      --dockerfile=${WORKSPACE}/frontend/Dockerfile \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
+                      --cache=false \
+                      --cleanup=false \
+                      --snapshot-mode=redo \
+                      --skip-unused-stages
                     """
                 }
             }
+        }
+    }
+
+    post {
+
+        success {
+
+            echo "Pipeline completed successfully"
+        }
+
+        failure {
+
+            echo "Pipeline failed"
         }
     }
 }
