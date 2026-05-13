@@ -31,25 +31,20 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                sh "docker build -t $REGISTRY/$BACKEND_IMAGE:$GIT_SHA ./backend"
-                sh "docker push $REGISTRY/$BACKEND_IMAGE:$GIT_SHA"
+                sh """
+                    docker build -t $REGISTRY/$BACKEND_IMAGE:$GIT_SHA ./backend
+                    docker push $REGISTRY/$BACKEND_IMAGE:$GIT_SHA
+                """
             }
         }
 
         stage('Build Frontend') {
             steps {
-                sh "docker build -t $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA ./frontend"
-                sh "docker push $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA"
+                sh """
+                    docker build -t $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA ./frontend
+                    docker push $REGISTRY/$FRONTEND_IMAGE:$GIT_SHA
+                """
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Build successful! Images pushed with tag: $GIT_SHA"
-        }
-        failure {
-            echo "❌ Build failed!"
         }
     }
 }
