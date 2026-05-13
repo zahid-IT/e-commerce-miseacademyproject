@@ -1,36 +1,55 @@
 pipeline {
+
     agent {
         kubernetes {
-            label 'kaniko-agent'
+
+            defaultContainer 'jnlp'
+
             yaml '''
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    app: kaniko-agent
+
 spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.23.2-debug
-    command:
-    - /busybox/cat
-    tty: true
-    volumeMounts:
-    - name: docker-config
-      mountPath: /kaniko/.docker
-    - name: workspace
-      mountPath: /workspace
-  - name: jnlp
-    image: jenkins/inbound-agent:latest
-    volumeMounts:
-    - name: workspace
-      mountPath: /home/jenkins/agent
+  restartPolicy: Never
+
   volumes:
-  - name: docker-config
-    secret:
-      secretName: dockerhub-secret
-  - name: workspace
-    emptyDir: {}
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+
+    - name: workspace-volume
+      emptyDir: {}
+
+  containers:
+
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      tty: true
+
+      command:
+        - /busybox/sh
+
+      args:
+        - -c
+        - cat
+
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+
+        - name: workspace-volume
+          mountPath: /home/jenkins/agent
+
+    - name: jnlp
+      image: jenkins/inbound-agent:latest
+      tty: true
+
+      volumeMounts:
+        - name: workspace-volume
+          mountPath: /home/jenkins/agent
 '''
         }
     }
@@ -42,42 +61,58 @@ spec:
     }
 
     stages {
+
         stage('Checkout') {
+
             steps {
+
                 checkout scm
+
                 script {
-                    env.GIT_SHA = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+
+                    env.GIT_SHA = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Commit: ${env.GIT_SHA}"
                 }
             }
         }
 
         stage('Build Backend') {
+
             steps {
+
                 container('kaniko') {
+
                     sh """
-                        /kaniko/executor \
-                            --context=/workspace/backend \
-                            --dockerfile=/workspace/backend/Dockerfile \
-                            --destination=$REGISTRY/$BACKEND_IMAGE:$GIT_SHA \
-                            --destination=$REGISTRY/$BACKEND_IMAGE:latest \
-                            --cache=true \
-                            --cleanup=false
+                    /kaniko/executor \
+                      --context=${WORKSPACE}/backend \
+                      --dockerfile=${WORKSPACE}/backend/Dockerfile \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${BACKEND_IMAGE}:latest \
+                      --cache=false \
+                      --skip-unused-stages
                     """
                 }
             }
         }
 
         stage('Build Frontend') {
+
             steps {
+
                 container('kaniko') {
+
                     sh """
-                        /kaniko/executor \
-                            --context=/workspace/frontend \
-                            --dockerfile=/workspace/frontend/Dockerfile \
-                            --destination=$REGISTRY/$FRONTEND_IMAGE:$GIT_SHA \
-                            --destination=$REGISTRY/$FRONTEND_IMAGE:latest \
-                            --cache=true \
-                            --cleanup=false
+                    /kaniko/executor \
+                      --context=${WORKSPACE}/frontend \
+                      --dockerfile=${WORKSPACE}/frontend/Dockerfile \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
+                      --destination=${REGISTRY}/${FRONTEND_IMAGE}:latest \
+                      --cache=false \
+                      --skip-unused-stages
                     """
                 }
             }
@@ -85,9 +120,11 @@ spec:
     }
 
     post {
+
         success {
-            echo "✅ Pipeline successful! Images pushed with tag: $GIT_SHA"
+            echo "✅ Pipeline completed successfully"
         }
+
         failure {
             echo "❌ Pipeline failed!"
         }
