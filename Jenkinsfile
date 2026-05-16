@@ -10,7 +10,7 @@ kind: Pod
 spec:
 
   volumes:
-    - name: docker-sock
+    - name: docker-graph-storage
       emptyDir: {}
 
   containers:
@@ -29,8 +29,8 @@ spec:
         - --tls=false
 
       volumeMounts:
-        - name: docker-sock
-          mountPath: /var/run
+        - name: docker-graph-storage
+          mountPath: /var/lib/docker
 
     - name: docker-cli
       image: docker:26-cli
@@ -44,8 +44,8 @@ spec:
           value: tcp://localhost:2375
 
       volumeMounts:
-        - name: docker-sock
-          mountPath: /var/run
+        - name: docker-graph-storage
+          mountPath: /var/lib/docker
 
     - name: jnlp
       image: jenkins/inbound-agent:latest
@@ -76,6 +76,24 @@ spec:
                         script: 'git rev-parse --short HEAD',
                         returnStdout: true
                     ).trim()
+
+                    echo "Commit SHA: ${GIT_SHA}"
+                }
+            }
+        }
+
+        stage('Wait For Docker') {
+
+            steps {
+
+                container('docker-cli') {
+
+                    sh '''
+                    until docker info; do
+                      echo "Waiting for Docker daemon..."
+                      sleep 3
+                    done
+                    '''
                 }
             }
         }
@@ -109,10 +127,10 @@ spec:
                 container('docker-cli') {
 
                     sh """
-                    docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} backend
-
-                    docker tag ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
-                               ${REGISTRY}/${BACKEND_IMAGE}:latest
+                    docker build \
+                      -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} \
+                      -t ${REGISTRY}/${BACKEND_IMAGE}:latest \
+                      backend
 
                     docker push ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}
 
@@ -129,10 +147,10 @@ spec:
                 container('docker-cli') {
 
                     sh """
-                    docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} frontend
-
-                    docker tag ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
-                               ${REGISTRY}/${FRONTEND_IMAGE}:latest
+                    docker build \
+                      -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} \
+                      -t ${REGISTRY}/${FRONTEND_IMAGE}:latest \
+                      frontend
 
                     docker push ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}
 
@@ -147,7 +165,7 @@ spec:
 
         success {
 
-            echo "✅ Build completed"
+            echo "✅ Build completed successfully"
         }
 
         failure {
