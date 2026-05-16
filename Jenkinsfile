@@ -1,60 +1,79 @@
-agent {
-    kubernetes {
+pipeline {
 
-        yaml '''
-apiVersion: v1
-kind: Pod
+    agent any
 
-spec:
+    environment {
+        REGISTRY = "docker.io/zahidbilal"
+        BACKEND_IMAGE = "ecommerce-backend"
+        FRONTEND_IMAGE = "ecommerce-frontend"
+    }
 
-  volumes:
-    - name: docker-graph-storage
-      emptyDir: {}
+    stages {
 
-  containers:
+        stage('Checkout') {
+            steps {
+                checkout scm
 
-    - name: docker
-      image: docker:26-dind
-      securityContext:
-        privileged: true
+                script {
+                    env.GIT_SHA = sh(
+                        script: "git rev-parse --short HEAD",
+                        returnStdout: true
+                    ).trim()
 
-      tty: true
+                    echo "Git SHA: ${GIT_SHA}"
+                }
+            }
+        }
 
-      env:
-        - name: DOCKER_TLS_CERTDIR
-          value: ""
+        stage('Docker Login') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-creds',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
 
-      command:
-        - dockerd-entrypoint.sh
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    '''
+                }
+            }
+        }
 
-      args:
-        - --host=tcp://0.0.0.0:2375
+        stage('Build Backend Image') {
+            steps {
+                sh """
+                docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} backend
+                docker tag ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} ${REGISTRY}/${BACKEND_IMAGE}:latest
 
-      volumeMounts:
-        - name: docker-graph-storage
-          mountPath: /var/lib/docker
+                docker push ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}
+                docker push ${REGISTRY}/${BACKEND_IMAGE}:latest
+                """
+            }
+        }
 
-    - name: docker-cli
-      image: docker:26-cli
+        stage('Build Frontend Image') {
+            steps {
+                sh """
+                docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} frontend
+                docker tag ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} ${REGISTRY}/${FRONTEND_IMAGE}:latest
 
-      tty: true
+                docker push ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}
+                docker push ${REGISTRY}/${FRONTEND_IMAGE}:latest
+                """
+            }
+        }
+    }
 
-      command:
-        - cat
+    post {
+        success {
+            echo "✅ Images built & pushed successfully"
+        }
 
-      env:
-        - name: DOCKER_HOST
-          value: tcp://localhost:2375
-
-        - name: DOCKER_TLS_CERTDIR
-          value: ""
-
-      volumeMounts:
-        - name: docker-graph-storage
-          mountPath: /var/lib/docker
-
-    - name: jnlp
-      image: jenkins/inbound-agent:latest
-'''
+        failure {
+            echo "❌ Pipeline failed"
+        }
     }
 }
