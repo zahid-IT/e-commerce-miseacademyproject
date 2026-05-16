@@ -27,7 +27,7 @@ spec:
 
     environment {
         REGISTRY = "docker.io/zahidbilal"
-        BACKEND = "ecommerce-backend"
+        BACKEND  = "ecommerce-backend"
         FRONTEND = "ecommerce-frontend"
     }
 
@@ -36,13 +36,14 @@ spec:
         stage('Checkout') {
             steps {
                 checkout scm
+
                 script {
                     env.GIT_SHA = sh(
                         script: "git rev-parse --short HEAD",
                         returnStdout: true
                     ).trim()
 
-                    echo "Using image tag: ${GIT_SHA}"
+                    echo "Using tag: ${GIT_SHA}"
                 }
             }
         }
@@ -74,13 +75,12 @@ spec:
                 }
             }
         }
-
+    }
 
     post {
         success {
-            echo "✅ Build + Push + GitOps Update completed (ArgoCD will deploy)"
+            echo "✅ Images built & pushed with tag: ${GIT_SHA}"
         }
-
         failure {
             echo "❌ Pipeline failed"
         }
