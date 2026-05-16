@@ -1,11 +1,36 @@
 pipeline {
 
-    agent any
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+    - name: kaniko
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command: ["sleep", "infinity"]
+      tty: true
+      volumeMounts:
+        - name: docker-config
+          mountPath: /kaniko/.docker
+
+  volumes:
+    - name: docker-config
+      secret:
+        secretName: dockerhub-secret
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+'''
+        }
+    }
 
     environment {
         REGISTRY = "docker.io/zahidbilal"
-        BACKEND_IMAGE = "ecommerce-backend"
-        FRONTEND_IMAGE = "ecommerce-frontend"
+        BACKEND = "ecommerce-backend"
+        FRONTEND = "ecommerce-frontend"
+        TAG = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -13,67 +38,47 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
 
-                script {
-                    env.GIT_SHA = sh(
-                        script: "git rev-parse --short HEAD",
-                        returnStdout: true
-                    ).trim()
-
-                    echo "Git SHA: ${GIT_SHA}"
+        stage('Build Backend') {
+            steps {
+                container('kaniko') {
+                    sh """
+                    /kaniko/executor \
+                    --context=${WORKSPACE}/backend \
+                    --dockerfile=${WORKSPACE}/backend/Dockerfile \
+                    --destination=${REGISTRY}/${BACKEND}:${TAG} \
+                    --destination=${REGISTRY}/${BACKEND}:latest \
+                    --cache=true
+                    """
                 }
             }
         }
 
-        stage('Docker Login') {
+        stage('Build Frontend') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-creds',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-
-                    sh '''
-                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                    '''
+                container('kaniko') {
+                    sh """
+                    /kaniko/executor \
+                    --context=${WORKSPACE}/frontend \
+                    --dockerfile=${WORKSPACE}/frontend/Dockerfile \
+                    --destination=${REGISTRY}/${FRONTEND}:${TAG} \
+                    --destination=${REGISTRY}/${FRONTEND}:latest \
+                    --cache=true
+                    """
                 }
-            }
-        }
-
-        stage('Build Backend Image') {
-            steps {
-                sh """
-                docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} backend
-                docker tag ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA} ${REGISTRY}/${BACKEND_IMAGE}:latest
-
-                docker push ${REGISTRY}/${BACKEND_IMAGE}:${GIT_SHA}
-                docker push ${REGISTRY}/${BACKEND_IMAGE}:latest
-                """
-            }
-        }
-
-        stage('Build Frontend Image') {
-            steps {
-                sh """
-                docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} frontend
-                docker tag ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA} ${REGISTRY}/${FRONTEND_IMAGE}:latest
-
-                docker push ${REGISTRY}/${FRONTEND_IMAGE}:${GIT_SHA}
-                docker push ${REGISTRY}/${FRONTEND_IMAGE}:latest
-                """
             }
         }
     }
 
     post {
         success {
-            echo "✅ Images built & pushed successfully"
+            echo "✅ Images built successfully with Kaniko"
         }
 
         failure {
-            echo "❌ Pipeline failed"
+            echo "❌ Build failed"
         }
     }
 }
