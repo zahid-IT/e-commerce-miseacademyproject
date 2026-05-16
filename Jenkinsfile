@@ -78,10 +78,7 @@ spec:
         stage('Update GitOps Repo (ArgoCD Trigger)') {
             steps {
                 sh """
-                git clone https://github.com/zahid-IT/e-commerce-miseacademyproject.git
-                cd e-commerce-miseacademyproject.git/helm/frontend
-
-                sed -i 's/tag:.*/tag: ${GIT_SHA}/' values.yaml
+                git clone https://github.com/zahid-IT/e-commerce-miseacademyproject.gi
 
                 git config user.email "jenkins@local"
                 git config user.name "jenkins"
