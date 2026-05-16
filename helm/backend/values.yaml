@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 
 # Number of replicas
-replicaCount: 1
+replicaCount: 2
 
 # Image configuration
 image:
