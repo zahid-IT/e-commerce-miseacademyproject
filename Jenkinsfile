@@ -75,21 +75,6 @@ spec:
             }
         }
 
-        stage('Update GitOps Repo (ArgoCD Trigger)') {
-            steps {
-                sh """
-                git clone https://github.com/zahid-IT/e-commerce-miseacademyproject.gi
-
-                git config user.email "jenkins@local"
-                git config user.name "jenkins"
-
-                git add .
-                git commit -m "Deploy frontend backend image: ${GIT_SHA}"
-                git push
-                """
-            }
-        }
-    }
 
     post {
         success {
