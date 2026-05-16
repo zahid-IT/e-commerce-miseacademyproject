@@ -78,7 +78,7 @@ spec:
         stage('Update GitOps Repo (ArgoCD Trigger)') {
             steps {
                 sh """
-                git clone https://github.com/zahid-IT/
+                git clone https://github.com/zahid-IT/e-commerce-miseacademyproject.git
                 cd YOUR-GITOPS-REPO/helm/frontend
 
                 sed -i 's/tag:.*/tag: ${GIT_SHA}/' values.yaml
