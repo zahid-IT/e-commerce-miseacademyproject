@@ -2,8 +2,8 @@ replicaCount: 1
 
 image:
   repository: zahidbilal/ecommerce-frontend
-  tag: latest
-  pullPolicy: IfNotPresent
+  tag: "GIT_SHA"
+  pullPolicy: Always
 
 service:
   type: ClusterIP
