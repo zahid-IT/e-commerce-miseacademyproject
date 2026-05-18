@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: zahidbilal/ecommerce-frontend
-  tag: "GIT_SHA"
+  tag: "latest"
   pullPolicy: Always
 
 service:
